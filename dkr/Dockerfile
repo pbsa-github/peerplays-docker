@@ -1,4 +1,3 @@
-
 FROM ubuntu:18.04
 
 # cd ~/dkr && docker build -t steem .
@@ -89,5 +88,4 @@ RUN echo "This container has been built with the following options:" >> /steem_b
 
 RUN echo "Please configure me! You need to mount a data directory onto /steem of this container to it to function correctly. (if you're using Steem-in-a-box most of this is handled automatically)"
 CMD ["sh", "-c", "${STEEMD_BIN}"]
-
 
