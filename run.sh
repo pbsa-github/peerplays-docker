@@ -48,8 +48,8 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
-: ${DK_TAG="someguy123/steem:latest"}
-: ${DK_TAG_FULL="someguy123/steem:latest-full"}
+: ${DK_TAG="datasecuritynode/peerplays:latest"}
+: ${DK_TAG_FULL="datasecuritynode/peerplays:latest-full"}
 : ${SHM_DIR="/dev/shm"}
 : ${REMOTE_WS="wss://steemd.privex.io"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
@@ -554,12 +554,12 @@ install() {
     if (( $# == 1 )); then
         DK_TAG=$1
         # If neither '/' nor ':' are present in the tag, then for convenience, assume that the user wants
-        # someguy123/steem with this specific tag.
+        # datasecuritynode/peerplays with this specific tag.
         if grep -qv ':' <<< "$1"; then
             if grep -qv '/' <<< "$1"; then
                 msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
-                DK_TAG="someguy123/steem:$1"
-                msg red "We're assuming you've entered a version, and will try to install @someguy123's image: '${DK_TAG}'"
+                DK_TAG="datasecuritynode/peerplays:$1"
+                msg red "We're assuming you've entered a version, and will try to install @datasecuritynode's image: '${DK_TAG}'"
                 msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TAG='$1' inside of .env and run './run.sh install'"
             fi
         fi
