@@ -24,7 +24,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DOCKER_NAME="seed"}
 
 # the tag to use when running/replaying steemd
-: ${DOCKER_IMAGE="steem"}
+: ${DOCKER_IMAGE="peerplays"}
 
 
 # HTTP or HTTPS url to grab the blockchain from. Set compression in BC_HTTP_CMP
@@ -66,7 +66,7 @@ RESET="$(tput sgr0)"
 # Internal variable. Set to 1 by build_full to inform child functions
 BUILD_FULL=0
 # Placeholder for custom tag var CUST_TAG (shared between functions)
-CUST_TAG="steem"
+CUST_TAG="peerplays"
 # Placeholder for BUILD_VER shared between functions
 BUILD_VER=""
 
@@ -568,8 +568,8 @@ install() {
     sleep 2
     msg yellow " -> Loading image from ${DK_TAG}"
     docker pull "$DK_TAG"
-    msg green " -> Tagging as steem"
-    docker tag "$DK_TAG" steem
+    msg green " -> Tagging as peerplays"
+    docker tag "$DK_TAG" peerplays
     msg bold green " -> Installation completed. You may now configure or run the server"
 }
 
@@ -580,8 +580,8 @@ install() {
 install_full() {
     msg yellow " -> Loading image from ${DK_TAG_FULL}"
     docker pull "$DK_TAG_FULL" 
-    msg green " -> Tagging as steem"
-    docker tag "$DK_TAG_FULL" steem
+    msg green " -> Tagging as peerplays"
+    docker tag "$DK_TAG_FULL" peerplays
     msg bold green " -> Installation completed. You may now configure or run the server"
 }
 
@@ -1154,13 +1154,13 @@ publish() {
 
     V="$2"
     
-    : ${MAIN_TAG="someguy123/steem:$V"}
+    : ${MAIN_TAG="datasecuritynode/peerplays:$V"}
     [[ "$MKMIRA" == "mira" ]] && SECTAG="latest-mira" || SECTAG="latest"
     (( $# > 2 )) && SECTAG="$3"
     if [[ "$SECTAG" == "n/a" ]]; then
         msg bold yellow  " >> Will build tag $V as tags $MAIN_TAG (no second tag)"
     else
-        SECOND_TAG="someguy123/steem:$SECTAG"
+        SECOND_TAG="datasecuritynode/peerplays:$SECTAG"
         msg bold yellow " >> Will build tag $V as tags $MAIN_TAG and $SECOND_TAG"
     fi
     sleep 5
