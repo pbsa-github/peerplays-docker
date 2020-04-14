@@ -24,7 +24,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DOCKER_NAME="seed"}
 
 # the tag to use when running/replaying steemd
-: ${DOCKER_IMAGE="steem"}
+: ${DOCKER_IMAGE="peerplays"}
 
 
 # HTTP or HTTPS url to grab the blockchain from. Set compression in BC_HTTP_CMP
@@ -48,8 +48,8 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
-: ${DK_TAG="someguy123/steem:latest"}
-: ${DK_TAG_FULL="someguy123/steem:latest-full"}
+: ${DK_TAG="datasecuritynode/peerplays:latest"}
+: ${DK_TAG_FULL="datasecuritynode/peerplays:latest-full"}
 : ${SHM_DIR="/dev/shm"}
 : ${REMOTE_WS="wss://steemd.privex.io"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
@@ -66,7 +66,7 @@ RESET="$(tput sgr0)"
 # Internal variable. Set to 1 by build_full to inform child functions
 BUILD_FULL=0
 # Placeholder for custom tag var CUST_TAG (shared between functions)
-CUST_TAG="steem"
+CUST_TAG="peerplays"
 # Placeholder for BUILD_VER shared between functions
 BUILD_VER=""
 
@@ -554,12 +554,12 @@ install() {
     if (( $# == 1 )); then
         DK_TAG=$1
         # If neither '/' nor ':' are present in the tag, then for convenience, assume that the user wants
-        # someguy123/steem with this specific tag.
+        # datasecuritynode/peerplays with this specific tag.
         if grep -qv ':' <<< "$1"; then
             if grep -qv '/' <<< "$1"; then
                 msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
-                DK_TAG="someguy123/steem:$1"
-                msg red "We're assuming you've entered a version, and will try to install @someguy123's image: '${DK_TAG}'"
+                DK_TAG="datasecuritynode/peerplays:$1"
+                msg red "We're assuming you've entered a version, and will try to install @datasecuritynode's image: '${DK_TAG}'"
                 msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TAG='$1' inside of .env and run './run.sh install'"
             fi
         fi
@@ -568,8 +568,8 @@ install() {
     sleep 2
     msg yellow " -> Loading image from ${DK_TAG}"
     docker pull "$DK_TAG"
-    msg green " -> Tagging as steem"
-    docker tag "$DK_TAG" steem
+    msg green " -> Tagging as peerplays"
+    docker tag "$DK_TAG" peerplays
     msg bold green " -> Installation completed. You may now configure or run the server"
 }
 
@@ -580,8 +580,8 @@ install() {
 install_full() {
     msg yellow " -> Loading image from ${DK_TAG_FULL}"
     docker pull "$DK_TAG_FULL" 
-    msg green " -> Tagging as steem"
-    docker tag "$DK_TAG_FULL" steem
+    msg green " -> Tagging as peerplays"
+    docker tag "$DK_TAG_FULL" peerplays
     msg bold green " -> Installation completed. You may now configure or run the server"
 }
 
@@ -1154,13 +1154,13 @@ publish() {
 
     V="$2"
     
-    : ${MAIN_TAG="someguy123/steem:$V"}
+    : ${MAIN_TAG="datasecuritynode/peerplays:$V"}
     [[ "$MKMIRA" == "mira" ]] && SECTAG="latest-mira" || SECTAG="latest"
     (( $# > 2 )) && SECTAG="$3"
     if [[ "$SECTAG" == "n/a" ]]; then
         msg bold yellow  " >> Will build tag $V as tags $MAIN_TAG (no second tag)"
     else
-        SECOND_TAG="someguy123/steem:$SECTAG"
+        SECOND_TAG="datasecuritynode/peerplays:$SECTAG"
         msg bold yellow " >> Will build tag $V as tags $MAIN_TAG and $SECOND_TAG"
     fi
     sleep 5
