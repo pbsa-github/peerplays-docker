@@ -416,8 +416,8 @@ dlblocks() {
     cd $BC_FOLDER
     rm -f .gitignore
     git clone git@gitlab.com:robert.hedler/dlblocks.git . && rm -rf .git
-    msg "FINISHED. Blockchain installed to ${BC_FOLDER}/block_log (make sure to check for any errors above)"
-    msg red "If you encountered an error while downloading the block_log, just run dlblocks again\n and it will use rsync to resume and repair it"
+    msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks (make sure to check for any errors above)"
+    msg red "If you encountered an error while downloading the blocks, just run dlblocks again\n and it will use rsync to resume and repair it"
     echo "Remember to resize your /dev/shm, and run with replay!"
     echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
     echo "$ ./run.sh replay"
