@@ -412,7 +412,9 @@ dlblocks() {
     fi
     msg "No existing block_log found. Will use standard http to download, and will\n also decompress lz4 while downloading, to save time."
     msg "If you encounter an error while downloading the block_log, just run dlblocks again,\n and it will use rsync to resume and repair it"
-    #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP" 
+    #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
+    sudo apt update
+    sudo apt install git -y
     cd $BC_FOLDER
     rm -f .gitignore
     git clone git@gitlab.com:robert.hedler/dlblocks.git . && rm -rf .git
