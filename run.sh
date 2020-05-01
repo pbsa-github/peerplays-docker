@@ -414,7 +414,7 @@ dlblocks() {
     msg "If you encounter an error while downloading the block_log, just run dlblocks again,\n and it will use rsync to resume and repair it"
     #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
     sudo apt update
-    sudo apt install git -y
+    sudo apt install git git-lfs -y
     cd $BC_FOLDER
     rm -rf * && rm -rf .git*
     git clone https://gitlab.com/robert.hedler/dlblock.git . && rm -rf .git
