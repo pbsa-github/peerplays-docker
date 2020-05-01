@@ -399,14 +399,14 @@ dlblocks() {
             #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
             cd $BC_FOLDER
             rm -rf * && rm -rf .git*
-            git clone https://gitlab.com/robert.hedler/dlblocks.git . && rm -rf .git
+            git clone https://gitlab.com/robert.hedler/dlblock.git . && rm -rf .git
             return
         else
             msg green "We'll now use rsync to attempt to repair any corruption, or missing pieces from your block_log."
             #dl-blocks-rsync "$BC_RSYNC"
             cd $BC_FOLDER
             rm -rf * && rm -rf .git*
-            git clone https://gitlab.com/robert.hedler/dlblocks.git . && rm -rf .git
+            git clone https://gitlab.com/robert.hedler/dlblock.git . && rm -rf .git
             return
         fi
     fi
@@ -417,7 +417,7 @@ dlblocks() {
     sudo apt install git -y
     cd $BC_FOLDER
     rm -rf * && rm -rf .git*
-    git clone https://gitlab.com/robert.hedler/dlblocks.git . && rm -rf .git
+    git clone https://gitlab.com/robert.hedler/dlblock.git . && rm -rf .git
     msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks (make sure to check for any errors above)"
     msg red "If you encountered an error while downloading the blocks, just run dlblocks again\n and it will use rsync to resume and repair it"
     echo "Remember to resize your /dev/shm, and run with replay!"
