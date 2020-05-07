@@ -399,41 +399,45 @@ dlblocks() {
             #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
             cd $BC_FOLDER
             rm -rf * && rm -rf .git*
-            if [ -f /etc/os-release ]; then . /etc/os-release && OS=$NAME VER=$VERSION_ID; fi
-            echo $OS $VER
-            if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then echo "Newer System, already validated. Proceed" && sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then echo "System already validated. Proceed" && sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then echo "Older system, needs additional steps. Proceed" && curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
-            else echo "System not supported"; fi|
-            git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
+            . /etc/os-release && OS=$NAME VER=$VERSION_ID
+            echo $OS $VER 01
+            if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
+            echo "Newer System, already validated. Proceed"
+            sudo apt-get -y install git git-lfs
+            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
+            echo "System already validated. Proceed"
+            sudo apt-get -y install git git-lfs
+            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
+            echo "Older system, needs additional steps. Proceed"
+            curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
+            else echo "System not supported"; 
+            fi
             return
         else
             msg green "We'll now use rsync to attempt to repair any corruption, or missing pieces from your block_log."
             #dl-blocks-rsync "$BC_RSYNC"
             cd $BC_FOLDER
             rm -rf * && rm -rf .git*
-            if [ -f /etc/os-release ]; then . /etc/os-release && OS=$NAME VER=$VERSION_ID; fi
-            echo $OS $VER
+            . /etc/os-release && OS=$NAME VER=$VERSION_ID
+            echo $OS $VER 02
             if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then echo "Newer System, already validated. Proceed" && sudo pt-get -y install git git-lfs
             elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then echo "System already validated. Proceed" && sudo apt-get -y install git git-lfs
             elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then echo "Older system, needs additional steps. Proceed" && curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
             else echo "System not supported"; fi|
-            git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
             return
         fi
     fi
     msg "No existing block_log found. Will use standard http to download, and will\n also decompress lz4 while downloading, to save time."
     msg "If you encounter an error while downloading the block_log, just run dlblocks again,\n and it will use rsync to resume and repair it"
     #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
-            if [ -f /etc/os-release ]; then . /etc/os-release && OS=$NAME VER=$VERSION_ID; fi
-            echo $OS $VER
+    cd $BC_FOLDER
+    rm -rf * && rm -rf .git*
+            . /etc/os-release && OS=$NAME VER=$VERSION_ID
+            echo $OS $VER 03
             if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then echo "Newer System, already validated. Proceed" && sudo pt-get -y install git git-lfs
             elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then echo "System already validated. Proceed" && sudo apt-get -y install git git-lfs
             elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then echo "Older system, needs additional steps. Proceed" && curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
             else echo "System not supported"; fi|
-    cd $BC_FOLDER
-    rm -rf * && rm -rf .git*
-    git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
     msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks (make sure to check for any errors above)"
     msg red "If you encountered an error while downloading the blocks, just run dlblocks again\n and it will use rsync to resume and repair it"
     echo "Remember to resize your /dev/shm, and run with replay!"
