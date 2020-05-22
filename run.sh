@@ -150,22 +150,22 @@ help() {
     start - starts seed container
     clean - Remove blockchain, p2p, and/or shared mem folder contents (warns beforehand)
     dlblocks - download and decompress the blockchain to speed up your first start
-    replay - starts steem container (in replay mode)
-    memory_replay - starts steem container (in replay mode, with --memory-replay)
+    replay - starts seed container (in replay mode)
+    memory_replay - starts seed container (in replay mode, with --memory-replay)
     shm_size - resizes /dev/shm to size given, e.g. ./run.sh shm_size 10G 
-    stop - stops steem container
-    status - show status of steem container
-    restart - restarts steem container
+    stop - stops seed container
+    status - show status of seed container
+    restart - restarts seed container
     install_docker - install docker
     install - pulls latest docker image from server (no compiling)
     install_full - pulls latest (FULL NODE FOR RPC) docker image from server (no compiling)
-    rebuild - builds steem container (from docker file), and then restarts it
-    build - only builds steem container (from docker file)
-    logs - show all logs inc. docker logs, and steem logs
+    rebuild - builds seed container (from docker file), and then restarts it
+    build - only builds seed container (from docker file)
+    logs - show all logs inc. docker logs, and seed logs
     wallet - open cli_wallet in the container
     remote_wallet - open cli_wallet in the container connecting to a remote seed
     enter - enter a bash session in the currently running container
-    shell - launch the steem container with appropriate mounts, then open bash for inspection
+    shell - launch the seed container with appropriate mounts, then open bash for inspection
     "
     echo
     exit
