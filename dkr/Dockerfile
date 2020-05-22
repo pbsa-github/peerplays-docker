@@ -77,7 +77,7 @@ ARG PEERPLAYSD_BIN="/usr/local/bin/witness_node"
 ENV PEERPLAYSD_BIN ${PEERPLAYSD_BIN}
 
 RUN echo "This container has been built with the following options:" >> /peerplays_build.txt && \
-    echo "----" >> /steem_build.txt && \
+    echo "----" >> /peerplays_build.txt && \
     echo "Git Repository:              ${PEERPLAYS_SOURCE}" >> /peerplays_build.txt && \
     echo "Git version/commit:          ${peerplaysd}\n----" >> /peerplays_build.txt && \
     echo "Default peerplays executable:   ${PEERPLAYSD_BIN}\n---" >> /peerplays_build.txt && \
