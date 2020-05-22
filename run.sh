@@ -401,7 +401,6 @@ dlblocks() {
             git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
             return
         fi
-    fi
     cd $BC_FOLDER && rm -rf .git*
     . /etc/os-release && OS=$NAME VER=$VERSION_ID
     echo Operating System: $OS $VER
