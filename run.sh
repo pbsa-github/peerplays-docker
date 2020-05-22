@@ -5,17 +5,6 @@
 #
 
 
-# Error handling function for ShellCore
-_sc_fail() { >&2 echo "Failed to load or install Privex ShellCore..." && exit 1; }
-# If `load.sh` isn't found in the user install / global install, then download and run the auto-installer
-# from Privex's CDN.
-[[ -f "${HOME}/.pv-shcore/load.sh" ]] || [[ -f "/usr/local/share/pv-shcore/load.sh" ]] || \
-    { curl -fsS https://cdn.privex.io/github/shell-core/install.sh | bash >/dev/null; } || _sc_fail
-
-# Attempt to load the local install of ShellCore first, then fallback to global install if it's not found.
-[[ -d "${HOME}/.pv-shcore" ]] && source "${HOME}/.pv-shcore/load.sh" || \
-    source "/usr/local/share/pv-shcore/load.sh" || _sc_fail
-
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DOCKER_DIR="$DIR/dkr"}
@@ -27,18 +16,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DOCKER_IMAGE="peerplays"}
 
 
-# HTTP or HTTPS url to grab the blockchain from. Set compression in BC_HTTP_CMP
-: ${BC_HTTP="http://files.privex.io/steem/block_log.lz4"}
-
-# Compression type, can be "xz", "lz4", or "no" (for no compression)
-# Uses on-the-fly de-compression while downloading, to conserve disk space
-# and save time by not having to decompress after the download is finished
-: ${BC_HTTP_CMP="lz4"}
-
-# Anonymous rsync daemon URL to the raw block_log, for repairing/resuming
-# a damaged/incomplete block_log. Set to "no" to disable rsync when resuming.
-: ${BC_RSYNC="rsync://files.privex.io/steem/block_log"}
-
 BOLD="$(tput bold)"
 RED="$(tput setaf 1)"
 GREEN="$(tput setaf 2)"
@@ -49,15 +26,14 @@ CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
 : ${DK_TAG="datasecuritynode/peerplays:latest"}
-: ${DK_TAG_FULL="datasecuritynode/peerplays:latest-full"}
+: ${DK_TAG_FULL="datasecuritynode/peerplays:full"}
 : ${SHM_DIR="/dev/shm"}
-: ${REMOTE_WS="wss://steemd.privex.io"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
 # Default: 600 seconds (10 minutes)
 : ${STOP_TIME=600}
 
 # Git repository to use when building Steem - containing steemd code
-: ${STEEM_SOURCE="https://github.com/steemit/steem.git"}
+: ${PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"}
 
 # Comma separated list of ports to expose to the internet.
 # By default, only port 2001 will be exposed (the P2P seed port)
@@ -226,11 +202,11 @@ optimize() {
 
 parse_build_args() {
     BUILD_VER=$1
-    CUST_TAG="steem:$BUILD_VER"
+    CUST_TAG="peerplays:$BUILD_VER"
     if (( $BUILD_FULL == 1 )); then
         CUST_TAG+="-full"
     fi
-    BUILD_ARGS+=('--build-arg' "steemd_version=${BUILD_VER}")
+    BUILD_ARGS+=('--build-arg' "peerplaysd=${BUILD_VER}")
     shift
     if (( $# >= 2 )); then
         if [[ "$1" == "tag" ]]; then
@@ -245,18 +221,18 @@ parse_build_args() {
         for a in "$@"; do
             msg yellow " ++ Build argument: ${BOLD}${a}"
             BUILD_ARGS+=('--build-arg' "$a")
-            if grep -q 'STEEM_SOURCE' <<< "$a"; then
+            if grep -q 'PEERPLAYS_SOURCE' <<< "$a"; then
                 has_steem_src='y'
             fi
         done
     fi
 
     if [[ "$has_steem_src" == "y" ]]; then
-        msg bold yellow " [!!] STEEM_SOURCE has been specified in the build arguments. Using source from build args instead of global"
+        msg bold yellow " [!!] PEERPLAYS_SOURCE has been specified in the build arguments. Using source from build args instead of global"
     else
-        msg bold yellow " [!!] Did not find STEEM_SOURCE in build args. Using STEEM_SOURCE from environment:"
-        msg bold yellow " [!!] STEEM_SOURCE = ${STEEM_SOURCE}"
-        BUILD_ARGS+=('--build-arg' "STEEM_SOURCE=${STEEM_SOURCE}")
+        msg bold yellow " [!!] Did not find PEERPLAYS_SOURCE in build args. Using PEERPLAYS_SOURCE from environment:"
+        msg bold yellow " [!!] PEERPLAYS_SOURCE = ${PEERPLAYS_SOURCE}"
+        BUILD_ARGS+=('--build-arg' "PEERPLAYS_SOURCE=${PEERPLAYS_SOURCE}")
     fi
     
     msg blue " ++ CUSTOM BUILD SPECIFIED. Building from branch/tag ${BOLD}${BUILD_VER}"
@@ -265,7 +241,7 @@ parse_build_args() {
 }
 
 build_local() {
-    STEEM_SOURCE="local_src_folder"
+    PEERPLAYS_SOURCE="local_src_folder"
     DOCKER_DIR="${DIR}/dkr_local"
 
     if [[ ! -d "${DOCKER_DIR}/src" ]]; then
@@ -392,13 +368,8 @@ dlblocks() {
         return $?
     fi
     if [[ -f "$BC_FOLDER/block_log" ]]; then
-        msg yellow "It looks like block_log already exists"
-        if [[ "$BC_RSYNC" == "no" ]]; then
-            msg red "As BC_RSYNC is set to 'no', we're just going to try to retry the http download"
-            msg "If your HTTP source is uncompressed, we'll try to resume it"
-            #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
-            cd $BC_FOLDER
-            rm -rf * && rm -rf .git*
+            msg yellow "It looks like block_log already exists"
+            cd $BC_FOLDER && rm -rf .git*
             . /etc/os-release && OS=$NAME VER=$VERSION_ID
             echo Operating System: $OS $VER
             if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
@@ -414,10 +385,7 @@ dlblocks() {
             git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
             return
         else
-            msg green "We'll now use rsync to attempt to repair any corruption, or missing pieces from your block_log."
-            #dl-blocks-rsync "$BC_RSYNC"
-            cd $BC_FOLDER
-            rm -rf * && rm -rf .git*
+            cd $BC_FOLDER && rm -rf .git*
             . /etc/os-release && OS=$NAME VER=$VERSION_ID
             echo Operating System: $OS $VER
             if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
@@ -434,11 +402,7 @@ dlblocks() {
             return
         fi
     fi
-    msg "No existing block_log found. Will use standard http to download, and will\n also decompress lz4 while downloading, to save time."
-    msg "If you encounter an error while downloading the block_log, just run dlblocks again,\n and it will use rsync to resume and repair it"
-    #dl-blocks-http "$BC_HTTP" "$BC_HTTP_CMP"
-    cd $BC_FOLDER
-    rm -rf * && rm -rf .git*
+    cd $BC_FOLDER && rm -rf .git*
     . /etc/os-release && OS=$NAME VER=$VERSION_ID
     echo Operating System: $OS $VER
     if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
@@ -452,123 +416,14 @@ dlblocks() {
     curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
     else echo "System not supported"; fi
     git clone https://gitlab.com/robert.hedler/dlblock.git .; rm -rf .git
-    msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks (make sure to check for any errors above)"
-    msg red "If you encountered an error while downloading the blocks, just run dlblocks again\n and it will use rsync to resume and repair it"
+if [ $? == 0 ] ; then
+    msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks"
     echo "Remember to resize your /dev/shm, and run with replay!"
     echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
-    echo "$ ./run.sh replay"
-}
+    echo "$ ./run.sh replay"else 
+    msg "Download error, please run dlblocks again."
+fi
 
-custom-dlblocks() {
-    local compress="no" # to be overriden if we have 2+ args
-    local dlvia="$1"
-    local url;
-
-    if (( $# > 1 )); then
-        url="$2"
-    else
-        if [[ "$dlvia" == "rsync" ]]; then url="$BC_RSYNC"; else url="$BC_HTTP"; fi
-        compress="$BC_HTTP_CMP"
-    fi
-    (( $# >= 3 )) && compress="$3"
-
-    case "$dlvia" in
-        rsync)
-            dl-blocks-rsync "$url"
-            return $?
-            ;;
-        rsync-replace)
-            msg yellow " -> Removing old block_log..."
-            sudo rm -vf "$BC_FOLDER/block_log"
-            dl-blocks-rsync "$url"
-            return $?
-            ;;
-        http)
-            dl-blocks-http "$url" "$compress"
-            return $? 
-            ;;
-        http-replace)
-            msg yellow " -> Removing old block_log..."
-            sudo rm -vf "$BC_FOLDER/block_log"
-            dl-blocks-http "$url" "$compress"
-            return $?
-            ;;
-        *)
-            msg red "Invalid download method"
-            msg red "Valid options are http, http-replace, rsync, or rsync-replace"
-            return 1
-            ;;
-    esac 
-}
-
-# Internal use
-# Usage: dl-blocks-rsync blocklog_url
-dl-blocks-rsync() {
-    local url="$1"
-    msg "This may take a while, and may at times appear to be stalled. ${YELLOW}${BOLD}Be patient, it takes time (3 to 10 mins) to scan the differences."
-    msg "Once it detects the differences, it will download at very high speed depending on how much of your block_log is intact."
-    echo -e "\n==============================================================="
-    echo -e "${BOLD}Downloading via:${RESET}\t${url}"
-    echo -e "${BOLD}Writing to:${RESET}\t\t${BC_FOLDER}/block_log"
-    echo -e "===============================================================\n"
-    # I = ignore timestamps and size, vv = be more verbose, h = human readable
-    # append-verify = attempt to append to the file, but make sure to verify the existing pieces match the server
-    rsync -Ivvh --append-verify --progress "$url" "${BC_FOLDER}/block_log"
-    ret=$?
-    if (($ret==0)); then
-        msg bold green " (+) FINISHED. Blockchain downloaded via rsync (make sure to check for any errors above)"
-    else
-        msg bold red "An error occurred while downloading via rsync... please check above for errors"
-    fi
-    return $ret
-}
-
-# Internal use
-# Usage: dl-blocks-http blocklog_url [compress_type]
-dl-blocks-http() {
-    local url="$1"
-    local compression="no"
-    (( $# < 1 )) && msg bold red "ERROR: no url specified for dl-blocks-http" && return 1
-    if (( $# == 2 )); then
-        compression="$2"
-        if [[ "$2" != "lz4" && "$2" != "xz" && "$2" != "no" ]]; then
-            echo "${RED}ERROR: Unknown compression type '$2' passed to dl-blocks-http.${RESET}"
-            echo "Please correct your http compression type."
-            echo "Choices: lz4, xz, no (for uncompressed)"
-            return 1
-        fi
-    fi
-    echo -e "\n==============================================================="
-    echo -e "${BOLD}Downloading via:${RESET}\t${url}"
-    echo -e "${BOLD}Writing to:${RESET}\t\t${BC_FOLDER}/block_log"
-    [[ "$compression" != "no" ]] && \
-        echo -e "${BOLD}Compression:${RESET}\t\t$compression"
-    echo -e "===============================================================\n"
-
-    if [[ "$compression" != "no" ]]; then 
-        msg bold green " -> Downloading and de-compressing block log on-the-fly..."
-    else
-        msg bold green " -> Downloading raw block log..."
-    fi
-
-    case "$compression" in 
-        lz4)
-            wget "$url" -O - | lz4 -dv - "$BC_FOLDER/block_log"
-            ;;
-        xz)
-            wget "$url" -O - | xz -dvv - "$BC_FOLDER/block_log"
-            ;;
-        no)
-            wget -c "$url" -O "$BC_FOLDER/block_log"
-            ;;
-    esac
-    ret=$?
-    if (($ret==0)); then
-        msg bold green " (+) FINISHED. Blockchain downloaded and decompressed (make sure to check for any errors above)"
-    else
-        msg bold red "An error occurred while downloading... please check above for errors"
-    fi
-    return $ret
 }
 
 # Usage: ./run.sh install_docker
@@ -692,7 +547,7 @@ replay() {
     fi 
     msg yellow " -> Removing old container '${DOCKER_NAME}'"
     docker rm $DOCKER_NAME 2> /dev/null
-    msg green " -> Running steem (image: ${DOCKER_IMAGE}) with replay in container '${DOCKER_NAME}'..."
+    msg green " -> Running peerplays (image: ${DOCKER_IMAGE}) with replay in container '${DOCKER_NAME}'..."
     docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay
     msg bold green " -> Started."
 }
@@ -701,7 +556,7 @@ replay() {
 memory_replay() {
     seed_running
     if [[ $? == 0 ]]; then
-        echo $RED"WARNING: Your Steem server ($DOCKER_NAME) is currently running"$RESET
+        echo $RED"WARNING: Your Peerplay server ($DOCKER_NAME) is currently running"$RESET
 	echo
         docker ps
 	echo
@@ -715,8 +570,8 @@ memory_replay() {
     fi 
     echo "Removing old container"
     docker rm $DOCKER_NAME
-    echo "Running steem with --memory-replay..."
-    docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/steem -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" steemd --data-dir=/steem/witness_node_data_dir --replay --memory-replay
+    echo "Running peerplay with --memory-replay..."
+    docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay --memory-replay
     echo "Started."
 }
 
@@ -770,7 +625,7 @@ enter() {
 # To avoid leftover containers, it uses `--rm` to remove the container once you exit.
 #
 shell() {
-    docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/steem --rm -it "$DOCKER_IMAGE" bash
+    docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays --rm -it "$DOCKER_IMAGE" bash
 }
 
 
@@ -795,7 +650,7 @@ remote_wallet() {
     if (( $# == 1 )); then
         REMOTE_WS=$1
     fi
-    docker run -v "$DATADIR":/steem --rm -it "$DOCKER_IMAGE" cli_wallet -s "$REMOTE_WS"
+    docker run -v "$DATADIR":/peerplays --rm -it "$DOCKER_IMAGE" cli_wallet -s "$REMOTE_WS"
 }
 
 # Usage: ./run.sh logs
@@ -851,204 +706,6 @@ pclogs() {
             printf '%s\r\n' "$L"
         fi
     done
-}
-
-# Usage: ./run.sh tslogs
-# (warning: may require root to work properly in some cases)
-# Shows the Steem logs, but with UTC timestamps extracted from the docker logs.
-# Scans and follows a large portion of your steem logs, filters out useless data, and appends a 
-# human readable timestamp on the left. Time is normally in UTC, not your local. Example:
-#
-#   2018-12-09T01:04:59 p2p_plugin.cpp:212            handle_block         ] Got 21 transactions 
-#                   on block 28398481 by someguy123 -- Block Time Offset: -345 ms
-#
-tslogs() {
-    if [[ ! $(command -v jq) ]]; then
-        msg red "jq not found. Attempting to install..."
-        sleep 3
-        sudo apt update
-        sudo apt install -y jq
-    fi
-    local LOG_PATH=$(docker inspect $DOCKER_NAME | jq -r .[0].LogPath)
-    local pipe=/tmp/dkpipe.fifo
-    trap "rm -f $pipe" EXIT
-    if [[ ! -p $pipe ]]; then
-        mkfifo $pipe
-    fi
-    # the sleep is a dirty hack to keep the pipe open
-
-    sleep 10000 < $pipe &
-    tail -n 100 -f "$LOG_PATH" &> $pipe &
-    while true
-    do
-        if read -r line <$pipe; then
-            # first, parse the line and print the time + log
-            L=$(jq -r ".time +\" \" + .log" <<<"$line")
-            # then, remove excessive \r's causing multiple line breaks
-            L=$(sed -e "s/\r//" <<< "$L")
-            # now remove the decimal time to make the logs cleaner
-            L=$(sed -e 's/\..*Z//' <<< "$L")
-            # remove the steem ms time because most people don't care
-            L=$(sed -e 's/[0-9]\+ms //' <<< "$L")
-            # and finally, strip off any duplicate new line characters
-            L=$(tr -s "\n" <<< "$L")
-            printf '%s\r\n' "$L"
-        fi
-    done
-}
-
-# Internal use only
-# Used by `ver` to pretty print new commits on origin/master
-simplecommitlog() {
-    local commit_format;
-    local args;
-    commit_format=""
-    commit_format+="    - Commit %Cgreen%h%Creset - %s %n"
-    commit_format+="      Author: %Cblue%an%Creset %n"
-    commit_format+="      Date/Time: %Cblue%ai%Creset%n"
-    if [[ "$#" -lt 1 ]]; then
-        echo "Usage: simplecommitlog branch [num_commits]"
-        echo "invalid use of simplecommitlog. exiting"
-        exit -1
-    fi
-    branch="$1"
-    args="$branch"
-    if [[ "$#" -eq 2 ]]; then
-        count="$2"
-        args="-n $count $args"
-    fi
-    git --no-pager log --pretty=format:"$commit_format" $args
-}
-
-
-# Usage: ./run.sh ver
-# Displays information about your Steem-in-a-box version, including the docker container
-# as well as the scripts such as run.sh. Checks for updates using git and DockerHub API.
-#
-ver() {
-    LINE="==========================="
-    ####
-    # Update git, so we can detect if we're outdated or not
-    # Also get the branch to warn people if they're not on master
-    ####
-    git remote update >/dev/null
-    current_branch=$(git branch | grep \* | cut -d ' ' -f2)
-    git_update=$(git status -uno)
-
-
-    ####
-    # Print out the current branch, commit and check upstream 
-    # to return commits that can be pulled
-    ####
-    echo "${BLUE}Current Steem-in-a-box version:${RESET}"
-    echo "    Branch: $current_branch"
-    if [[ "$current_branch" != "master" ]]; then
-        echo "${RED}WARNING: You're not on the master branch. This may prevent you from updating${RESET}"
-        echo "${GREEN}Fix: Run 'git checkout master' to change to the master branch${RESET}"
-    fi
-    # Warn user of modified core files
-    git_status=$(git status -s)
-    modified=0
-    while IFS='' read -r line || [[ -n "$line" ]]; do
-        if grep -q " M " <<< $line; then
-            modified=1
-        fi
-    done <<< "$git_status"
-    if [[ "$modified" -ne 0 ]]; then
-        echo "    ${RED}ERROR: Your steem-in-a-box core files have been modified (see 'git status'). You will not be able to update."
-        echo "    Fix: Run 'git reset --hard' to reset all core files back to their originals before updating."
-        echo "    This will not affect your running witness, or files such as config.ini which are supposed to be edited by the user${RESET}"
-    fi
-    echo "    ${BLUE}Current Commit:${RESET}"
-    simplecommitlog "$current_branch" 1
-    echo
-    echo
-    # Check for updates and let user know what's new
-    if grep -Eiq "up.to.date" <<< "$git_update"; then
-        echo "    ${GREEN}Your steem-in-a-box core files (run.sh, Dockerfile etc.) up to date${RESET}"
-    else
-        echo "    ${RED}Your steem-in-a-box core files (run.sh, Dockerfile etc.) are outdated!${RESET}"
-        echo
-        echo "    ${BLUE}Updates in the current published version of Steem-in-a-box:${RESET}"
-        simplecommitlog "HEAD..origin/master"
-        echo
-        echo
-        echo "    Fix: ${YELLOW}Please run 'git pull' to update your steem-in-a-box. This should not affect any running containers.${RESET}"
-    fi
-    echo $LINE
-
-    ####
-    # Show the currently installed image information
-    ####
-    echo "${BLUE}Steem image installed:${RESET}"
-    # Pretty printed docker image ID + creation date
-    dkimg_output=$(docker images -f "reference=steem:latest" --format "Tag: {{.Repository}}, Image ID: {{.ID}}, Created At: {{.CreatedSince}}")
-    # Just the image ID
-    dkimg_id=$(docker images -f "reference=steem:latest" --format "{{.ID}}")
-    # Used later on, for commands that depend on the image existing
-    got_dkimg=0
-    if [[ $(wc -c <<< "$dkimg_output") -lt 10 ]]; then
-        echo "${RED}WARNING: We could not find the currently installed image (${DOCKER_IMAGE})${RESET}"
-        echo "${RED}Make sure it's installed with './run.sh install' or './run.sh build'${RESET}"
-    else
-        echo "    $dkimg_output"
-        got_dkimg=1
-        echo "${BLUE}Checking for updates...${RESET}"
-        remote_docker_id="$(get_latest_id)"
-        if [[ "$?" == 0 ]]; then
-            remote_docker_id="${remote_docker_id:7:12}"
-            if [[ "$remote_docker_id" != "$dkimg_id" ]]; then
-                echo "    ${YELLOW}An update is available for your Steem installation"
-                echo "    Your image ID: $dkimg_id    Image ID on Docker Hub: ${remote_docker_id}"
-                echo "    NOTE: If you have built manually with './run.sh build', your image will not match docker hub."
-                echo "    To update, use ./run.sh install - a replay may or may not be required (ask in #witness on steem.chat)${RESET}"
-            else
-                echo "${GREEN}Your installed docker image ($dkimg_id) matches Docker Hub ($remote_docker_id)"
-                echo "You're running the latest version of Steem from @someguy123's builds${RESET}"
-            fi
-        else
-            echo "    ${YELLOW}An error occurred while checking for updates${RESET}"
-        fi
-
-    fi
-
-    echo $LINE
-
-    msg green "Build information for currently installed Steem image '${DOCKER_IMAGE}':"
-
-    docker run --rm -it "${DOCKER_IMAGE}" cat /steem_build.txt
-
-    echo "${BLUE}Steem version currently running:${RESET}"
-    # Verify that the container exists, even if it's stopped
-    if seed_exists; then
-        _container_image_id=$(docker inspect "$DOCKER_NAME" -f '{{.Image}}')
-        # Truncate the long SHA256 sum to the standard 12 character image ID
-        container_image_id="${_container_image_id:7:12}"
-        echo "    Container $DOCKER_NAME is running on docker image ID ${container_image_id}"
-        # If the docker image check was successful earlier, then compare the image to the current container 
-        if [[ "$got_dkimg" == 1 ]]; then
-            if [[ "$container_image_id" == "$dkimg_id" ]]; then
-                echo "    ${GREEN}Container $DOCKER_NAME is running image $container_image_id, which matches steem:latest ($dkimg_id)"
-                echo "    Your container will not change Steem version on restart${RESET}"
-            else
-                echo "    ${YELLOW}Warning: Container $DOCKER_NAME is running image $container_image_id, which DOES NOT MATCH steem:latest ($dkimg_id)"
-                echo "    Your container may change Steem version on restart${RESET}"
-            fi
-        else
-            echo "    ${YELLOW}Could not get installed image earlier. Skipping image/container comparison.${RESET}"
-        fi
-        echo "    ...scanning logs to discover blockchain version - this may take 30 seconds or more"
-        l=$(docker logs "$DOCKER_NAME")
-        if grep -q "blockchain version" <<< "$l"; then
-            echo "  " $(grep "blockchain version" <<< "$l")
-        else
-            echo "    ${RED}Could not identify blockchain version. Not found in logs for '$DOCKER_NAME'${RESET}"
-        fi
-    else
-        echo "    ${RED}Unfortunately your Steem container doesn't exist (start it with ./run.sh start or replay)..."
-        echo "    We can't identify your blockchain version unless the container has been started at least once${RESET}"
-    fi
-
 }
 
 # Usage: ./run.sh start
@@ -1167,56 +824,6 @@ sb_clean() {
     msg bold green " ++ Done."
 }
 
-# For use by @someguy123 for generating binary images
-# ./run.sh publish [mira|nomira] [version] (extratag def: latest)
-# e.g. ./run.sh publish mira v0.22.1
-# e.g. ./run.sh publish nomira some-branch-fix v0.22.1-fixed
-#
-# disable extra tag:
-# e.g. ./run.sh publish nomira some-branch-fix n/a
-#
-publish() {
-    if (( $# < 2 )); then
-        msg green "Usage: $0 publish [mira|nomira] [version] (extratag def: latest)"
-        msg yellow "Environment vars:\n\tMAIN_TAG - Override the primary tag (default: someguy123/steem:\$V)\n"
-        return 1
-    fi
-    MKMIRA="$1"
-    BUILD_OPTS=()
-    case "$MKMIRA" in
-        mira)
-            BUILD_OPTS+=("ENABLE_MIRA=ON")
-            ;;
-        nomira)
-            BUILD_OPTS+=("ENABLE_MIRA=OFF")
-            ;;
-        *)
-            msg red "Invalid 1st argument for publish"
-            msg green "Usage: $0 publish [mira|nomira] [version] (extratag def: latest)"
-            return 1
-            ;;
-    esac
-
-    V="$2"
-    
-    : ${MAIN_TAG="datasecuritynode/peerplays:$V"}
-    [[ "$MKMIRA" == "mira" ]] && SECTAG="latest-mira" || SECTAG="latest"
-    (( $# > 2 )) && SECTAG="$3"
-    if [[ "$SECTAG" == "n/a" ]]; then
-        msg bold yellow  " >> Will build tag $V as tags $MAIN_TAG (no second tag)"
-    else
-        SECOND_TAG="datasecuritynode/peerplays:$SECTAG"
-        msg bold yellow " >> Will build tag $V as tags $MAIN_TAG and $SECOND_TAG"
-    fi
-    sleep 5
-    ./run.sh build "$V" tag "$MAIN_TAG" "${BUILD_OPTS[@]}"
-    [[ "$SECTAG" != "n/a" ]] && docker tag "$MAIN_TAG" "$SECOND_TAG"
-    docker push "$MAIN_TAG"
-    [[ "$SECTAG" != "n/a" ]] && docker push "$SECOND_TAG"
-
-    msg bold green " >> Finished"
-}
-
 
 if [ "$#" -lt 1 ]; then
     help
@@ -1242,9 +849,6 @@ case $1 in
         ;;
     install_full)
         install_full
-        ;;
-    publish)
-        publish "${@:2}"
         ;;
     start)
         start
