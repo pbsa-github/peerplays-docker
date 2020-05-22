@@ -308,8 +308,8 @@ build() {
     docker build -t "$DOCKER_IMAGE" .
     ret=$?
     if (( $ret == 0 )); then
-        msg bold green " +++ Successfully built current stable steemd"
-        msg green " +++ Steem node type: ${BOLD}${fmm}"
+        msg bold green " +++ Successfully built current stable peerplaysd"
+        msg green " +++ Peerplays node type: ${BOLD}${fmm}"
         msg green " +++ Docker tag: ${DOCKER_IMAGE}"
     else
         msg bold red " !!! ERROR: Something went wrong during the build process."
