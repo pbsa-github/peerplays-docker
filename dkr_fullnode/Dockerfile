@@ -22,8 +22,8 @@ RUN pip3 install jinja2
 #
 ###
 
-ARG peerplaysd=master
-ENV peerplaysd ${peerplaysd}
+ARG PEERPLAYS_VERSION=master
+ENV PEERPLAYS_VERSION ${PEERPLAYS_VERSION}
 
 ARG PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"
 ENV PEERPLAYS_SOURCE ${PEERPLAYS_SOURCE}
@@ -44,16 +44,16 @@ ARG SKIP_BY_TX_ID=ON
 ENV SKIP_BY_TX_ID ${SKIP_BY_TX_ID}
 
 RUN cd ~ && \
-    echo " >>> Cloning tag/branch ${peerplaysd} from repo: ${PEERPLAYS_SOURCE}" && \
-	git clone ${PEERPLAYS_SOURCE} peerplays -b ${peerplaysd} && \
+    echo " >>> Cloning tag/branch ${PEERPLAYS_VERSION} from repo: ${PEERPLAYS_SOURCE}" && \
+	git clone ${PEERPLAYS_SOURCE} peerplays -b ${PEERPLAYS_VERSION} && \
 	cd peerplays && \
-	BOOST_ROOT=$HOME/opt/boost_1_68_0 && \
-	wget -c 'http://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2/download' -O boost_1_68_0.tar.bz2 && \
-	tar xjf boost_1_68_0.tar.bz2 && \
-	cd boost_1_68_0/ && \
+	BOOST_ROOT=$HOME/opt/boost_1_67_0 && \
+	wget -c 'http://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.bz2/download' -O boost_1_67_0.tar.bz2 && \
+	tar xjf boost_1_67_0.tar.bz2 && \
+	cd boost_1_67_0/ && \
 	./bootstrap.sh "--prefix=$BOOST_ROOT" && \
 	./b2 install && \
-	git checkout ${peerplaysd} && \
+	git checkout ${PEERPLAYS_VERSION} && \
 	git submodule update --init --recursive && \
         cd ~/peerplays && \
 	cmake -DBOOST_ROOT="$BOOST_ROOT" -DCMAKE_BUILD_TYPE=Release . \
@@ -79,7 +79,7 @@ ENV PEERPLAYSD_BIN ${PEERPLAYSD_BIN}
 RUN echo "This container has been built with the following options:" >> /peerplays_build.txt && \
     echo "----" >> /peerplays_build.txt && \
     echo "Git Repository:              ${PEERPLAYS_SOURCE}" >> /peerplays_build.txt && \
-    echo "Git version/commit:          ${peerplaysd}\n----" >> /peerplays_build.txt && \
+    echo "Git version/commit:          ${PEERPLAYS_VERSION}\n----" >> /peerplays_build.txt && \
     echo "Default peerplays executable:   ${PEERPLAYSD_BIN}\n---" >> /peerplays_build.txt && \
     echo "--- CMake Config Options ---" >> /peerplays_build.txt && \
     echo "LOW_MEMORY_MODE=${LOW_MEMORY_MODE}\nSTEEM_STATIC_BUILD=${STEEM_STATIC_BUILD}" >> /peerplays_build.txt && \
