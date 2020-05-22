@@ -147,7 +147,7 @@ help() {
     echo "Usage: $0 COMMAND [DATA]"
     echo
     echo "Commands: 
-    start - starts steem container
+    start - starts seed container
     clean - Remove blockchain, p2p, and/or shared mem folder contents (warns beforehand)
     dlblocks - download and decompress the blockchain to speed up your first start
     replay - starts steem container (in replay mode)
