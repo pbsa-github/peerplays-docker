@@ -1,4 +1,4 @@
-# Steem-in-a-box by @someguy123
+# Steem-in-a-box by @someguy123 adapted for Peerplays Blockchain
 
 **Steem-in-a-box** is a toolkit for using the Steem [docker images](https://hub.docker.com/r/someguy123/steem/tags/) published by @someguy123.
 
@@ -23,12 +23,12 @@ Features:
 To install a witness or seed node:
 
 ```bash
-git clone https://github.com/someguy123/steem-docker.git
-cd steem-docker
+git clone https://gitlab.com/data-security-node/peerplays-docker.git
+cd peerplays-docker
 # If you don't already have a docker installation, this will install it for you
 ./run.sh install_docker
 
-# This downloads/updates the low-memory docker image for Steem
+# This downloads/updates the docker image for Peerplays
 ./run.sh install
 
 # If you are a witness, you need to adjust the configuration as needed
@@ -102,7 +102,7 @@ git pull
 
 **If you're updating a full node, please remember to use `install_full` instead of install.**
 
-If you experience issues during restart, try running replay instead. You may also want to check [@someguy123's steemit](https://steemit.com/@someguy123) for any special update instructions, such as config changes.
+If you experience issues during restart, try running replay instead. You may also want to check [@someguy123's hive blog](https://hive.blog/@someguy123) or [@peerplays's hive blog](https://hive.blog/@peerplays) for any special update instructions, such as config changes.
 
 # Checking the status of your node
 
@@ -118,7 +118,7 @@ You can also connect the local wallet using:
 ./run.sh wallet
 ```
 
-Be aware, you can't connect cli_wallet until your steemd has finished replaying.
+Be aware, you can't connect cli_wallet until your Peerplays blockchain (witness_node) has finished replaying.
 
 # Environment options
 
