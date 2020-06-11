@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
-# cd ~/dkr && docker build -t steem .
-# docker run -p 0.0.0.0:2001:2001 -v $PWD/data:/steem -d -t steem
+# cd ~/dkr && docker build -t peerplays .
+# docker run -p 0.0.0.0:2001:2001 -v $PWD/data:/PEERPLAYS -d -t peerplays
 
 
 RUN apt-get update && \
@@ -18,7 +18,7 @@ RUN pip3 install jinja2
 # Overridable build arguments
 # Can override during docker build using '--build-arg' like so:
 #
-#   docker build --build-arg "ENABLE_MIRA=OFF" --build-arg="STEEM_STATIC_BUILD=OFF" -t steem
+#   docker build --build-arg "ENABLE_MIRA=OFF" --build-arg="PEERPLAYS_STATIC_BUILD=OFF" -t peerplays
 #
 ###
 
@@ -28,8 +28,8 @@ ENV PEERPLAYS_VERSION ${PEERPLAYS_VERSION}
 ARG PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"
 ENV PEERPLAYS_SOURCE ${PEERPLAYS_SOURCE}
 
-ARG STEEM_STATIC_BUILD=ON
-ENV STEEM_STATIC_BUILD ${STEEM_STATIC_BUILD}
+ARG PEERPLAYS_STATIC_BUILD=ON
+ENV PEERPLAYS_STATIC_BUILD ${PEERPLAYS_STATIC_BUILD}
 
 ARG ENABLE_MIRA=ON
 ENV ENABLE_MIRA ${ENABLE_MIRA}
@@ -59,7 +59,7 @@ RUN cd ~ && \
 	cmake -DBOOST_ROOT="$BOOST_ROOT" -DCMAKE_BUILD_TYPE=Release . \
             -DLOW_MEMORY_NODE=${LOW_MEMORY_MODE} \
             -DCLEAR_VOTES=${CLEAR_VOTES} \
-            -DSTEEM_STATIC_BUILD=${STEEM_STATIC_BUILD} \
+            -DPEERPLAYS_STATIC_BUILD=${PEERPLAYS_STATIC_BUILD} \
             -DSKIP_BY_TX_ID=${SKIP_BY_TX_ID} \
             -DENABLE_MIRA=${ENABLE_MIRA} && \
 	make -j$(nproc) && make install && rm -rf ~/peerplays
@@ -82,7 +82,7 @@ RUN echo "This container has been built with the following options:" >> /peerpla
     echo "Git version/commit:          ${PEERPLAYS_VERSION}\n----" >> /peerplays_build.txt && \
     echo "Default peerplays executable:   ${PEERPLAYSD_BIN}\n---" >> /peerplays_build.txt && \
     echo "--- CMake Config Options ---" >> /peerplays_build.txt && \
-    echo "LOW_MEMORY_MODE=${LOW_MEMORY_MODE}\nSTEEM_STATIC_BUILD=${STEEM_STATIC_BUILD}" >> /peerplays_build.txt && \
+    echo "LOW_MEMORY_MODE=${LOW_MEMORY_MODE}\nPEERPLAYS_STATIC_BUILD=${PEERPLAYS_STATIC_BUILD}" >> /peerplays_build.txt && \
     echo "SKIP_BY_TX_ID=${SKIP_BY_TX_ID}\nENABLE_MIRA=${ENABLE_MIRA}\nCLEAR_VOTES=${CLEAR_VOTES}" >> /peerplays_build.txt && \
     echo "----\nBuilt at: $(date)\n----" >> /peerplays_build.txt
 

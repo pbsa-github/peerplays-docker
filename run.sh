@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Steem node manager
+# Peerplays node manager
 # Released under GNU AGPL by Someguy123
 #
 
@@ -12,7 +12,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DATADIR="$DIR/data"}
 : ${DOCKER_NAME="seed"}
 
-# the tag to use when running/replaying steemd
+# the tag to use when running/replaying peerplaysd
 : ${DOCKER_IMAGE="peerplays"}
 
 
@@ -32,7 +32,7 @@ RESET="$(tput sgr0)"
 # Default: 600 seconds (10 minutes)
 : ${STOP_TIME=600}
 
-# Git repository to use when building Steem - containing steemd code
+# Git repository to use when building Peerplays - containing peerplaysd code
 : ${PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"}
 
 # Comma separated list of ports to expose to the internet.
@@ -106,7 +106,7 @@ if [[ ! -f "$CONF_FILE" ]]; then
         echo " > You may want to adjust this if you're running a witness, e.g. disable p2p-endpoint"
     else
         echo "${YELLOW}WARNING: You don't seem to have a config file and the example config couldn't be found...${RESET}"
-        echo "${YELLOW}${BOLD}You may want to check these files exist, or you won't be able to launch Steem${RESET}"
+        echo "${YELLOW}${BOLD}You may want to check these files exist, or you won't be able to launch Peerplays${RESET}"
         echo "Example Config: $EXAMPLE_CONF"
         echo "Main Config: $CONF_FILE"
     fi
@@ -122,7 +122,7 @@ if [[ ! -f "$MIRA_FILE" ]]; then
 
     else
         echo "${YELLOW}WARNING: You don't seem to have a MIRA config file (data/database.cfg) and the example config couldn't be found...${RESET}"
-        echo "${YELLOW}${BOLD}You may want to check these files exist, or you won't be able to use Steem with MIRA${RESET}"
+        echo "${YELLOW}${BOLD}You may want to check these files exist, or you won't be able to use Peerplays with MIRA${RESET}"
         echo "Example Config: $EXAMPLE_MIRA"
         echo "Main Config: $MIRA_FILE"
     fi
@@ -215,19 +215,19 @@ parse_build_args() {
             shift; shift;    # Get rid of the two tag arguments. Everything after is now build args
         fi
     fi
-    local has_steem_src='n'
+    local has_peerplays_src='n'
     if (( $# >= 1 )); then
         msg yellow " >> Additional build arguments specified."
         for a in "$@"; do
             msg yellow " ++ Build argument: ${BOLD}${a}"
             BUILD_ARGS+=('--build-arg' "$a")
             if grep -q 'PEERPLAYS_SOURCE' <<< "$a"; then
-                has_steem_src='y'
+                has_peerplays_src='y'
             fi
         done
     fi
 
-    if [[ "$has_steem_src" == "y" ]]; then
+    if [[ "$has_peerplays_src" == "y" ]]; then
         msg bold yellow " [!!] PEERPLAYS_SOURCE has been specified in the build arguments. Using source from build args instead of global"
     else
         msg bold yellow " [!!] Did not find PEERPLAYS_SOURCE in build args. Using PEERPLAYS_SOURCE from environment:"
@@ -250,17 +250,17 @@ build_local() {
     fi
 
     msg green " >>> Local build requested."
-    msg green " >>> Will build Steem using code stored in '${DOCKER_DIR}/src' instead of remote git repo"
+    msg green " >>> Will build Peerplays using code stored in '${DOCKER_DIR}/src' instead of remote git repo"
     build "$@"
 }
 
 # Build standard low memory node as a docker image
 # Usage: ./run.sh build [version] [tag tag_name] [build_args]
-# Version is prefixed with v, matching steem releases
+# Version is prefixed with v, matching Peerplays releases
 # e.g. build v0.20.6
 #
 # Override destination tag:
-#   ./run.sh build v0.21.0 tag 'steem:latest'
+#   ./run.sh build v0.21.0 tag 'peerplays:latest'
 #
 # Additional build args:
 #   ./run.sh build v0.21.0 ENABLE_MIRA=OFF
@@ -284,16 +284,16 @@ build() {
     !!! !!! !!! !!! !!! !!! READ THIS !!! !!! !!! !!! !!! !!!
     !!! !!! !!! !!! !!! !!! READ THIS !!! !!! !!! !!! !!! !!!
         For your safety, we've tagged this image as $CUST_TAG
-        To use it in this steem-docker, run: 
+        To use it in this peerplays-docker, run: 
         ${GREEN}${BOLD}
-        docker tag $CUST_TAG steem:latest
+        docker tag $CUST_TAG peerplays:latest
         ${RESET}${RED}
     !!! !!! !!! !!! !!! !!! READ THIS !!! !!! !!! !!! !!! !!!
     !!! !!! !!! !!! !!! !!! READ THIS !!! !!! !!! !!! !!! !!!
         ${RESET}
             "
-            msg bold green " +++ Successfully built steemd"
-            msg green " +++ Steem node type: ${BOLD}${fmm}"
+            msg bold green " +++ Successfully built peerplaysd"
+            msg green " +++ Peerplays node type: ${BOLD}${fmm}"
             msg green " +++ Version/Branch: ${BOLD}${BUILD_VER}"
             msg green " +++ Build args: ${BOLD}${BUILD_ARGS[@]}"
             msg green " +++ Docker tag: ${CUST_TAG}"
@@ -319,7 +319,7 @@ build() {
 
 # Build full memory node (for RPC nodes) as a docker image
 # Usage: ./run.sh build_full [version]
-# Version is prefixed with v, matching steem releases
+# Version is prefixed with v, matching Peerplays releases
 # e.g. build_full v0.20.6
 build_full() {
     BUILD_FULL=1
@@ -348,12 +348,6 @@ build_full() {
 # Example: The default compressed lz4 download failed, but left it's block_log in place. 
 # You don't want to use rsync to resume, because your network is very fast
 # Instead, you can continue your download using the uncompressed version over HTTP:
-#
-#   ./run.sh dlblocks http "http://files.privex.io/steem/block_log"
-#
-# Or just re-download the whole uncompressed file instead of resuming:
-#
-#   ./run.sh dlblocks http-replace "http://files.privex.io/steem/block_log"
 #
 dlblocks() {
     pkg_not_found rsync rsync
@@ -441,13 +435,13 @@ install_docker() {
 }
 
 # Usage: ./run.sh install [tag]
-# Downloads the Steem low memory node image from someguy123's official builds, or a custom tag if supplied
+# Downloads the Peerplays low memory node image from datasecuritynode official builds, or a custom tag if supplied
 #
 #   tag - optionally specify a docker tag to install from. can be third party
 #         format: user/repo:version    or   user/repo   (uses the 'latest' tag)
 #
 # If no tag specified, it will download the pre-set $DK_TAG in run.sh or .env
-# Default tag is normally someguy123/steem:latest (official builds by the creator of steem-docker).
+# Default tag is normally datasecuritynode/peerplays:latest (official builds by the creator of peerplays-docker).
 #
 install() {
     if (( $# == 1 )); then
@@ -473,8 +467,8 @@ install() {
 }
 
 # Usage: ./run.sh install_full
-# Downloads the Steem full node image from the pre-set $DK_TAG_FULL in run.sh or .env
-# Default tag is normally someguy123/steem:latest-full (official builds by the creator of steem-docker).
+# Downloads the Peerplays full node image from the pre-set $DK_TAG_FULL in run.sh or .env
+# Default tag is normally datasecuritynode/peerplays:latest-full (official builds by the creator of peerplays-docker).
 #
 install_full() {
     msg yellow " -> Loading image from ${DK_TAG_FULL}"
@@ -513,7 +507,7 @@ seed_running() {
 }
 
 # Usage: ./run.sh start
-# Creates and/or starts the Steem docker container
+# Creates and/or starts the Peerplays docker container
 start() {
     msg bold green " -> Starting container '${DOCKER_NAME}'..."
     seed_exists
@@ -525,14 +519,14 @@ start() {
 }
 
 # Usage: ./run.sh replay
-# Replays the blockchain for the Steem docker container
-# If steem is already running, it will ask you if you still want to replay
+# Replays the blockchain for the Peerplays docker container
+# If Peerplays is already running, it will ask you if you still want to replay
 # so that it can stop and remove the old container
 #
 replay() {
     seed_running
     if [[ $? == 0 ]]; then
-        echo $RED"WARNING: Your Steem server ($DOCKER_NAME) is currently running"$RESET
+        echo $RED"WARNING: Your Peerplays server ($DOCKER_NAME) is currently running"$RESET
         echo
         docker ps
         echo
@@ -575,7 +569,7 @@ memory_replay() {
 }
 
 # Usage: ./run.sh shm_size size
-# Resizes the ramdisk used for storing Steem's shared_memory at /dev/shm
+# Resizes the ramdisk used for storing Peerplays's shared_memory at /dev/shm
 # Size should be specified with G (gigabytes), e.g. ./run.sh shm_size 64G
 #
 shm_size() {
@@ -593,7 +587,7 @@ shm_size() {
 }
 
 # Usage: ./run.sh stop
-# Stops the Steem container, and removes the container to avoid any leftover
+# Stops the Peerplays container, and removes the container to avoid any leftover
 # configuration, e.g. replay command line options
 #
 stop() {
@@ -629,8 +623,8 @@ shell() {
 
 
 # Usage: ./run.sh wallet
-# Opens cli_wallet inside of the running Steem container and
-# connects to the local steemd over websockets on port 8090
+# Opens cli_wallet inside of the running Peerplays container and
+# connects to the local peerplaysd over websockets on port 8090
 #
 wallet() {
     docker exec -it $DOCKER_NAME cli_wallet -s ws://127.0.0.1:8090
@@ -640,10 +634,7 @@ wallet() {
 # Connects to a remote websocket server for wallet connection. This is completely safe
 # as your wallet/private keys are never sent to the remote server.
 #
-# By default, it will connect to wss://steemd.privex.io:443 (ws = normal websockets, wss = secure HTTPS websockets)
-# See this link for a list of WSS nodes: https://www.steem.center/index.php?title=Public_Websocket_Servers
-# 
-#    wss_server - a custom websocket server to connect to, e.g. ./run.sh remote_wallet wss://rpc.steemviz.com
+# By default, it will connect to peerplays witness nodes (ws = normal websockets, wss = secure HTTPS websockets)
 #
 remote_wallet() {
     if (( $# == 1 )); then
@@ -653,7 +644,7 @@ remote_wallet() {
 }
 
 # Usage: ./run.sh logs
-# Shows the last 30 log lines of the running steem container, and follows the log until you press ctrl-c
+# Shows the last 30 log lines of the running Peerplays container, and follows the log until you press ctrl-c
 #
 logs() {
     msg blue "DOCKER LOGS: (press ctrl-c to exit) "
@@ -665,7 +656,7 @@ logs() {
 # Usage: ./run.sh pclogs
 # (warning: may require root to work properly in some cases)
 # Used to watch % replayed during blockchain replaying.
-# Scans and follows a large portion of your steem logs then filters to only include the replay percentage
+# Scans and follows a large portion of your Peerplays logs then filters to only include the replay percentage
 #   example:    2018-12-08T23:47:16    22.2312%   6300000 of 28338603   (60052M free)
 #
 pclogs() {
