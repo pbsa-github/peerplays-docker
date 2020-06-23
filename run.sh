@@ -11,10 +11,12 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${FULL_DOCKER_DIR="$DIR/dkr_fullnode"}
 : ${DATADIR="$DIR/data"}
 : ${DOCKER_NAME="seed"}
+: ${DOCKER_NETWORK="son"}
+: ${SON_WALLET="son-wallet"}
+: ${BTC_REGTEST_KEY="cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m"}
 
 # the tag to use when running/replaying peerplaysd
 : ${DOCKER_IMAGE="peerplays"}
-
 
 BOLD="$(tput bold)"
 RED="$(tput setaf 1)"
@@ -36,8 +38,8 @@ RESET="$(tput sgr0)"
 : ${PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"}
 
 # Comma separated list of ports to expose to the internet.
-# By default, only port 2001 will be exposed (the P2P seed port)
-: ${PORTS="2001"}
+# By default, only port 9777 will be exposed (the P2P seed port)
+: ${PORTS="9777"}
 
 # Internal variable. Set to 1 by build_full to inform child functions
 BUILD_FULL=0
@@ -97,6 +99,9 @@ fi
 : ${EXAMPLE_CONF="$DATADIR/witness_node_data_dir/config.ini.example"}
 : ${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}
 
+# full path to btc regtest config
+: ${BTC_REGTEST_CONF="/Users/roshansyed/test/peerplays-docker/bitcoin/regtest/bitcoin.conf"}
+
 # if the config file doesn't exist, try copying the example config
 if [[ ! -f "$CONF_FILE" ]]; then
     if [[ -f "$EXAMPLE_CONF" ]]; then
@@ -148,9 +153,12 @@ help() {
     echo
     echo "Commands: 
     start - starts seed container
+    start_son - starts son seed container
+    start_son_regtest - starts son seed container and bitcoind-node container under the docker network
     clean - Remove blockchain, p2p, and/or shared mem folder contents (warns beforehand)
     dlblocks - download and decompress the blockchain to speed up your first start
     replay - starts seed container (in replay mode)
+    replay_son - starts son seed container (in replay mode)
     memory_replay - starts seed container (in replay mode, with --memory-replay)
     shm_size - resizes /dev/shm to size given, e.g. ./run.sh shm_size 10G 
     stop - stops seed container
@@ -493,6 +501,34 @@ seed_exists() {
 }
 
 # Internal Use Only
+# Checks if the container bitcoind-node exists. Returns 0 if it does, -1 if not.
+# Usage:
+# if bitcoin_regtest_exists; then echo "true"; else "false"; fi
+#
+bitcoin_regtest_exists() {
+    networkcount=$(docker ps -a -f name="^/"bitcoind-node"$" | wc -l)
+    if [[ $networkcount -eq 2 ]]; then
+        return 0
+    else
+        return -1
+    fi
+}
+
+# Internal Use Only
+# Checks if the son network exists. Returns 0 if it does, -1 if not.
+# Usage:
+# if son_network_exists; then echo "true"; else "false"; fi
+#
+son_network_exists() {
+    networkcount=$(docker network ls | grep son | wc -l)
+    if [[ $networkcount -eq 2 ]]; then
+        return 0
+    else
+        return -1
+    fi
+}
+
+# Internal Use Only
 # Checks if the container $DOCKER_NAME is running. Returns 0 if it's running, -1 if not.
 # Usage:
 # if seed_running; then echo "true"; else "false"; fi
@@ -515,6 +551,50 @@ start() {
         docker start $DOCKER_NAME
     else
         docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+    fi
+}
+
+# Usage: ./run.sh start_son
+# Creates and/or starts the Peerplays SON docker container
+start_son() {
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --network son -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+    fi
+}
+
+
+# Usage: ./run.sh start_son_regtest
+# Creates and/or starts the Peerplays SON docker container with a Bitcoin regtest node in a created docker network.
+start_son_regtest() {
+    msg yellow " -> Verifying network '${DOCKER_NETWORK}'..."
+    son_network_exists
+    if [[ $? == 0 ]]; then
+        msg yellow " -> Network '${DOCKER_NETWORK}' exists"
+    else
+        docker network create ${DOCKER_NETWORK}
+    fi
+
+    msg bold green " -> Starting container bitcoind-node..."
+    bitcoin_regtest_exists
+    if [[ $? == 0 ]]; then
+        docker start bitcoind-node
+    else
+        docker run -v bitcoind-data:/bitcoin --name=bitcoind-node -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
+        sleep 10
+        docker exec bitcoind-node bitcoin-cli createwallet ${SON_WALLET}
+        docker exec bitcoind-node bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
+    fi
+
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
     fi
 }
 
@@ -566,6 +646,18 @@ memory_replay() {
     echo "Running peerplay with --memory-replay..."
     docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay --memory-replay
     echo "Started."
+}
+
+# Usage: ./run.sh son_replay
+# Replays the SON chain
+replay_son() {
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network son -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay
+    fi
 }
 
 # Usage: ./run.sh shm_size size
@@ -843,8 +935,17 @@ case $1 in
     start)
         start
         ;;
+    start_son)
+        start_son
+        ;;
+    start_son_regtest)
+        start_son_regtest
+        ;;
     replay)
         replay
+        ;;
+    replay_son)
+        replay_son
         ;;
     memory_replay)
         memory_replay
