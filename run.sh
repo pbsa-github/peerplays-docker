@@ -100,7 +100,7 @@ fi
 : ${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}
 
 # full path to btc regtest config
-: ${BTC_REGTEST_CONF="/Users/roshansyed/test/peerplays-docker/bitcoin/regtest/bitcoin.conf"}
+: ${BTC_REGTEST_CONF="/var/opt/peerplays-docker/bitcoin/regtest/bitcoin.conf"}
 
 # if the config file doesn't exist, try copying the example config
 if [[ ! -f "$CONF_FILE" ]]; then
