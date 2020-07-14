@@ -594,7 +594,7 @@ start_son_regtest() {
     if [[ $? == 0 ]]; then
         docker start $DOCKER_NAME
     else
-        docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+        docker run -p 127.0.0.1:1776:1776  -p 127.0.0.1:8090:8090 -p 9777:9777 --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
     fi
 }
 
