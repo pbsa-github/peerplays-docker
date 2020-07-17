@@ -11,6 +11,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${FULL_DOCKER_DIR="$DIR/dkr_fullnode"}
 : ${DATADIR="$DIR/data"}
 : ${DOCKER_NAME="seed"}
+: ${DOCKER_BITCOIN_NAME="bitcoind-node"}
+: ${DOCKER_BITCOIN_VOLUME="bitcoind-data"}
 : ${DOCKER_NETWORK="son"}
 : ${SON_WALLET="son-wallet"}
 : ${BTC_REGTEST_KEY="cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m"}
@@ -154,8 +156,8 @@ help() {
     echo "Commands: 
     start - starts seed container
     start_son - starts son seed container
-    start_son_regtest - starts son seed container and bitcoind-node container under the docker network
-    clean - Remove blockchain, p2p, and/or shared mem folder contents (warns beforehand)
+    start_son_regtest - starts son seed container and bitcoind container under the docker network
+    clean - Remove blockchain, p2p, and/or shared mem folder contents, seed, bitcoind, and son docker network (warns beforehand)
     dlblocks - download and decompress the blockchain to speed up your first start
     replay - starts seed container (in replay mode)
     replay_son - starts son seed container (in replay mode)
@@ -501,12 +503,12 @@ seed_exists() {
 }
 
 # Internal Use Only
-# Checks if the container bitcoind-node exists. Returns 0 if it does, -1 if not.
+# Checks if the bitcoin container exists. Returns 0 if it does, -1 if not.
 # Usage:
 # if bitcoin_regtest_exists; then echo "true"; else "false"; fi
 #
 bitcoin_regtest_exists() {
-    networkcount=$(docker ps -a -f name="^/"bitcoind-node"$" | wc -l)
+    networkcount=$(docker ps -a -f name="^/"$DOCKER_BITCOIN_NAME"$" | wc -l)
     if [[ $networkcount -eq 2 ]]; then
         return 0
     else
@@ -578,15 +580,15 @@ start_son_regtest() {
         docker network create ${DOCKER_NETWORK}
     fi
 
-    msg bold green " -> Starting container bitcoind-node..."
+    msg bold green " -> Starting container $DOCKER_BITCOIN_NAME..."
     bitcoin_regtest_exists
     if [[ $? == 0 ]]; then
-        docker start bitcoind-node
+        docker start $DOCKER_BITCOIN_NAME
     else
-        docker run -v bitcoind-data:/bitcoin --name=bitcoind-node -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
+        docker run -v $DOCKER_BITCOIN_VOLUME:/bitcoin --name=$DOCKER_BITCOIN_NAME -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
         sleep 10
-        docker exec bitcoind-node bitcoin-cli createwallet ${SON_WALLET}
-        docker exec bitcoind-node bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
+        docker exec $DOCKER_BITCOIN_NAME bitcoin-cli createwallet ${SON_WALLET}
+        docker exec $DOCKER_BITCOIN_NAME bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
     fi
 
     msg bold green " -> Starting container '${DOCKER_NAME}'..."
@@ -858,6 +860,19 @@ sb_clean() {
                 rm -rfv "$p2p_dir"/*
                 mkdir -p "$bc_dir" "$p2p_dir" "$SHM_DIR" &> /dev/null
                 msg bold green " +++ Cleared blockchain + p2p + shared memory"
+                ;;
+            son)
+                msg bold red "!!! Clearing all files in $bc_dir and $p2p_dir and removing $DOCKER_NAME, $DOCKER_BITCOIN_NAME containers and $DOCKER_NETWORK docker network and $DOCKER_BITCOIN_VOLUME volume"
+                docker stop $DOCKER_NAME
+                docker rm $DOCKER_NAME
+                docker stop $DOCKER_BITCOIN_NAME
+                docker rm $DOCKER_BITCOIN_NAME
+                docker network rm $DOCKER_NETWORK
+                docker volume rm $DOCKER_BITCOIN_VOLUME
+                rm -rfv "$bc_dir"/*
+                rm -rfv "$p2p_dir"/*
+                mkdir -p "$bc_dir" "$p2p_dir" &> /dev/null
+                msg bold green " +++ Cleared blockchain files + p2p + peerplays container + bitcoin container + son network"
                 ;;
             *)
                 msg bold red " !!! Invalid option. Either run './run.sh clean' for interactive mode, "

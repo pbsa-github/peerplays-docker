@@ -5,7 +5,12 @@ p2p-endpoint = 0.0.0.0:9777
 # seed-node =
 
 # JSON array of P2P nodes to connect to on startup
-seed-nodes = ["96.46.49.1:9777", "96.46.49.5:9777", "96.46.49.9:9777", "96.46.49.13:9777"]
+
+## Empty seed nodes means new network
+seed-nodes = []
+
+## Connect to other SON nodes
+#seed-nodes = ["96.46.49.1:9777", "96.46.49.5:9777", "96.46.49.9:9777", "96.46.49.13:9777"]
 
 # Pairs of [BLOCK_NUM,BLOCK_ID] that should be enforced as checkpoints.
 # checkpoint = 
@@ -49,10 +54,10 @@ required-participation = false
 # witness-id = 
 
 # IDs of multiple witnesses controlled by this node (e.g. ["1.6.5", "1.6.6"], quotes are required)
-# witness-ids =
+witness-ids = ["1.6.1", "1.6.2", "1.6.3", "1.6.4", "1.6.5", "1.6.6","1.6.7"]
 
 # Tuple of [PublicKey, WIF private key] (may specify multiple times)
-private-key = ["TEST8eF6P2mvHssWGPN5VzEVC22RQkmTyrKskbHWhKbCZ45uwe2xzD", "5JzRHf68T8NT5T9fpDzRtYzxpafVUPPjCwUuxnwJ1L7hgwDBeNY"]
+private-key = ["TEST6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]
 
 
 # ==============================================================================
