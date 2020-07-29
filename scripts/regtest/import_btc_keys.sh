@@ -1,3 +1,4 @@
+#!/bin/bash
 # Import default keys
 docker exec bitcoind-node bitcoin-cli -rpcwallet="son-wallet"  importprivkey cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m
 docker exec bitcoind-node bitcoin-cli -rpcwallet="son-wallet"  importprivkey cQBBNyEw6P3pgc2NjPpKR2YoCpio9s3qEMkFkY7v9hByLAxeLQ3s
