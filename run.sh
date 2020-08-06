@@ -586,7 +586,7 @@ start_son_regtest() {
         docker start $DOCKER_BITCOIN_NAME
     else
         docker run -v $DOCKER_BITCOIN_VOLUME:/bitcoin --name=$DOCKER_BITCOIN_NAME -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
-        sleep 10
+        sleep 40
         docker exec $DOCKER_BITCOIN_NAME bitcoin-cli createwallet ${SON_WALLET}
         docker exec $DOCKER_BITCOIN_NAME bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
     fi
