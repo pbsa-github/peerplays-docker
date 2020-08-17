@@ -1,0 +1,159 @@
+# Endpoint for P2P node to listen on
+p2p-endpoint = 0.0.0.0:9777
+
+# P2P nodes to connect to on startup (may specify multiple times)
+# seed-node =
+
+# JSON array of P2P nodes to connect to on startup
+
+## Empty seed nodes means new network
+seed-nodes = []
+
+## Connect to other SON nodes
+#seed-nodes = ["96.46.49.1:9777", "96.46.49.5:9777", "96.46.49.9:9777", "96.46.49.13:9777"]
+
+# Pairs of [BLOCK_NUM,BLOCK_ID] that should be enforced as checkpoints.
+# checkpoint = 
+
+# Endpoint for websocket RPC to listen on
+rpc-endpoint = 0.0.0.0:8090
+
+# Endpoint for TLS websocket RPC to listen on
+# rpc-tls-endpoint = 
+
+# The TLS certificate file for this server
+# server-pem = 
+
+# Password for this certificate
+# server-pem-password = 
+
+# File to read Genesis State from
+genesis-json = /peerplays/son-genesis.json
+
+# Block signing key to use for init witnesses, overrides genesis file
+# dbg-init-key = 
+
+# JSON file specifying API permissions
+# api-access = 
+
+# Space-separated list of plugins to activate
+plugins = witness account_history market_history accounts_list affiliate_stats bookie 
+
+
+# ==============================================================================
+# witness plugin options
+# ==============================================================================
+
+# Enable block production, even if the chain is stale.
+enable-stale-production = false
+
+# Percent of witnesses (0-99) that must be participating in order to produce blocks
+required-participation = false
+
+# ID of witness controlled by this node (e.g. "1.6.5", quotes are required, may specify multiple times)
+# witness-id = 
+
+# IDs of multiple witnesses controlled by this node (e.g. ["1.6.5", "1.6.6"], quotes are required)
+witness-ids = ["1.6.1", "1.6.2", "1.6.3", "1.6.4", "1.6.5", "1.6.6","1.6.7"]
+
+# Tuple of [PublicKey, WIF private key] (may specify multiple times)
+private-key = ["TEST6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]
+
+
+# ==============================================================================
+# account_history plugin options
+# ==============================================================================
+
+# Account ID to track history for (may specify multiple times)
+# track-account = 
+
+# Keep only those operations in memory that are related to account history tracking
+partial-operations = 1
+
+# Maximum number of operations per account will be kept in memory
+max-ops-per-account = 100
+
+
+# ==============================================================================
+# market_history plugin options
+# ==============================================================================
+
+# Track market history by grouping orders into buckets of equal size measured in seconds specified as a JSON array of numbers
+bucket-size = [15,60,300,3600,86400]
+
+# How far back in time to track history for each bucket size, measured in the number of buckets (default: 1000)
+history-per-size = 1000
+
+
+# ==============================================================================
+# peerplays_sidechain plugin options
+# ==============================================================================
+
+# ID of SON controlled by this node (e.g. "1.27.5", quotes are required)
+son-ids = ["1.27.0", "1.27.1", "1.27.2", "1.27.3", "1.27.4", "1.27.5", "1.27.6", "1.27.7", "1.27.8", "1.27.9", "1.27.10", "1.27.11", "1.27.12","1.27.13", "1.27.14"]
+
+# IDs of multiple SONs controlled by this node (e.g. ["1.27.5", "1.27.6"], quotes are required)
+# son-ids = 
+
+# Tuple of [PublicKey, WIF private key] (may specify multiple times)
+peerplays-private-key = ["TEST8TCQFzyYDp3DPgWZ24261fMPSCzXxVyoF3miWeTj6JTi2DZdrL", "5K7tjTnFn2zasimVmebUiH1yawgwK9YXm2chUwcurcHgqms9JaF"]
+peerplays-private-key = ["TEST82qv1LKFvwVKD9pg5JQf6qqwLcoeqUniQjWJ3wKTodyWa7gHUs", "5JRquoT4gUGN3uubduPHs4DBXm9rAkK4v9XiFSsC3W9auiLmfCw"]
+peerplays-private-key = ["TEST6xdp7MrEPnaNK9GuF3KTeTizgGN6JC5nPmxx81higFepSZ8N7r", "5JA2FTEYR8chN4yyjuvjPVj8rLBsenF2hCHJiCvsbqVT3f1rK3y"]
+peerplays-private-key = ["TEST55j32Up75gHCxJBPN18vEytL9anDgEVFtsaCii38keGQG71X22", "5KKPsfzeDkLsF9pY4k24RTbMwzboGdBeL5xVEV7KAA1KTkRmvLJ"]
+peerplays-private-key = ["TEST68bX5bB16GkEAig6w2WTh9NbM9nHa66CemnDRx2njRY9bbWXhU", "5KfCbyBSM9THppP6rziPP5tob5josREyLUQ5a3eapxSroYgwoQW"]
+peerplays-private-key = ["TEST7mtTyM2rD18xDTtLTxWhq6W6zFgAgPFu9KHSFNsfWJXZNT8Wc8", "5KG5VDSLDufHNnQmntDerqyZiJc2KSs7cdJwNHazUHTFBCo55z5"]
+peerplays-private-key = ["TEST7RMDnipLkFaQ4vtDyVvgyCedRoxyT9JWpAoM9mrE7rwVSyezoB", "5Ke4rE7et3M3u7W56oC7GgVcg4gHfSRmhBrUDbEMynRonBNccts"]
+peerplays-private-key = ["TEST51nSJ2q1C9htnYWfTv73JxEc4nBWPNxJtUGPGpD4XwxeLzAd8t", "5Khgi1sfBVdrTW9AHxWFAneiWaU3bYH4e735EfE57159avREuwg"]
+peerplays-private-key = ["TEST8EmMMvQdAPzcnxymRUpbYdg8fArUY473QosCQpuPtWXxXtoNp4", "5JQg9dkzHrJGo83RdhnAa1qbQp5qV36CRQibnfJrHfhGenhfgsJ"]
+peerplays-private-key = ["TEST5815xbKy73Bx1LJWW1jg7GshWSEFWub3uoiEFP7FtP6z4YZtkU", "5KHL95xtsCfDjPFWxYPBrtwDyMefZEcpvoY7NnSm2cg5myNhfyf"]
+peerplays-private-key = ["TEST61qgG2v6JArygFiQCKypymxhBqg1wKmmbdkHeNkXhYDvkZmBtY", "5Hw1GisKTx5hYddiTXaWcdvd5eWDGWrKEKuJW8WyCmEb4Xge1S9"]
+peerplays-private-key = ["TEST6z33kHxQxyGvFWfpAnL3X3MvLtPEBknkNeFFJyk63PvRtaN1Xo", "5KhRjXEPMSRcYq7WP1hEyED9kRXnXS8cUX9Gtr8iC5eeGWfuUEx"]
+peerplays-private-key = ["TEST55eCWenoKmZct5YvUYv7aphMmSVkroZTJZWFHGTVj8r8bKEPMd", "5JDfNgNseqtpLNiNbr3GH4JawUnHgZuKv4sVQ6ogZj8veWzugZL"]
+peerplays-private-key = ["TEST5e4HXhA4yBEGzaXVyjuVabKhG1qGghi6rypvq5fLxAmU9XLRHT", "5JWx5uWUgbabd8HJSo1VwFnejCBLEimccKp874kr6VaXWgRu9Mk"]
+peerplays-private-key = ["TEST89qMuZejYeeGvjr3bMEcGyvhD4dyUchmxbLNUBFbPodqJKJPZc", "5JBDoxqXDE5ZqKTq9C2gMSo5tdcFakV9PUmp8AExjiJqvKgvXn2"]
+peerplays-private-key = ["TEST6KRpHxYJSE5vXvoeVMLbKSYnVspt2nnGV2enncRzHgLQ9dez5v", "5J8VEW8BvZBYRRTtf5p3yCyq7K9T5DBe1dadtmvmzqxvgPAk2Nr"]
+# IP address of Bitcoin node
+bitcoin-node-ip = 127.0.0.1
+
+# ZMQ port of Bitcoin node
+bitcoin-node-zmq-port = 11111
+
+# RPC port of Bitcoin node
+bitcoin-node-rpc-port = 8332
+
+# Bitcoin RPC user
+bitcoin-node-rpc-user = 1
+
+# Bitcoin RPC password
+bitcoin-node-rpc-password = 1
+
+# Bitcoin wallet
+bitcoin-wallet = son-wallet
+
+# Bitcoin wallet password
+bitcoin-wallet-password = ""
+
+# Tuple of [Bitcoin public key, Bitcoin private key] (may specify multiple times)
+bitcoin-private-key = ["036ff520044bbbeeb58acc436f19f0552dc96ee80663522d3270a4578d78f414be", "cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m"]
+bitcoin-private-key = ["02d67c26cf20153fe7625ca1454222d3b3aeb53b122d8a0f7d32a3dd4b2c2016f4", "cQBBNyEw6P3pgc2NjPpKR2YoCpio9s3qEMkFkY7v9hByLAxeLQ3s"]
+bitcoin-private-key = ["025f7cfda933516fd590c5a34ad4a68e3143b6f4155a64b3aab2c55fb851150f61", "cQLKc4UgKyCdXY3PosndszEZTsB6mTrg4avZF6kDphrULKd2W6L4"]
+bitcoin-private-key = ["0228155bb1ddcd11c7f14a2752565178023aa963f84ea6b6a052bddebad6fe9866", "cN43k9sqQimgzChZm9Qz1V1bdkjVwB3mcSHsEuj6bfUa4SP2AsTk"]
+bitcoin-private-key = ["037500441cfb4484da377073459511823b344f1ef0d46bac1efd4c7c466746f666", "cNBmovk8MnGmQBs7scJ3p1fRftdV1EyXMuUsX5DfmWg7wtmUMFBe"]
+bitcoin-private-key = ["02ef0d79bfdb99ab0be674b1d5d06c24debd74bffdc28d466633d6668cc281cccf", "cPQNr8RFGHEZVv6GoTPSTca24vZXzvQSJTUzuwArLzxXdhh7TY3H"]
+bitcoin-private-key = ["0317941e4219548682fb8d8e172f0a8ce4d83ce21272435c85d598558c8e060b7f", "cRNwxg1aozGvACsVWFE7xGtUBq7Fw4it2GQGBb2XLvaVidoCZim4"]
+bitcoin-private-key = ["0266065b27f7e3d3ad45b471b1cd4e02de73fc4737dc2679915a45e293c5adcf84", "cPmakGTVWfsXsT8gSPZp9bcMkUAjSQYgwUtHKqn7cvTjv9vZvBix"]
+bitcoin-private-key = ["023821cc3da7be9e8cdceb8f146e9ddd78a9519875ecc5b42fe645af690544bccf", "cSafFKRU6YFxS56jcAfdrKoLYvfnwHEdvJ3LzvjJciMGz3dsktpV"]
+bitcoin-private-key = ["0229ff2b2106b76c27c393e82d71c20eec32bcf1f0cf1a9aca8a237269a67ff3e5", "cSDxZhz4ceyBLcbQwEHWU7G4ER7zZ1YkvkWf28MgyEkLznmU4YGh"]
+bitcoin-private-key = ["024d113381cc09deb8a6da62e0470644d1a06de82be2725b5052668c8845a4a8da", "cPPiiVPx1C2upFNUFBkJejqC23UdqFHQd997jJxPz5Y3Hsd22LWu"]
+bitcoin-private-key = ["03df2462a5a2f681a3896f61964a65566ff77448be9a55a6da18506fd9c6c051c1", "cRLAbigw6N7TyooJn4j4egoKmdmrJYFEQtsWbYsWMCfZBn6AZLF2"]
+bitcoin-private-key = ["02bafba3096f546cc5831ce1e49ba7142478a659f2d689bbc70ed37235255172a8", "cVn2ARgPNeCpiNjAJK863DntnmftoAKjUF9Zqsnuuo3Ybv5Y5XrQ"]
+bitcoin-private-key = ["0287bcbd4f5d357f89a86979b386402445d7e9a5dccfd16146d1d2ab0dc2c32ae8", "cNgGKKPAxDXD8SBronD1MSX8df17jTBvcSD1uugepFgstUbRvpy4"]
+bitcoin-private-key = ["02053859d76aa375d6f343a60e3678e906c008015e32fe4712b1fd2b26473bdd73", "cUjR52VietRnVCmY56TEVRgkkst7RzjZqDoJqkL3tNrs1NkrgjU6"]
+bitcoin-private-key = ["03c880baffd37471f3c7e712e51b339dd08e2056757fc8499ea3d41d4fa1801247", "cVkEokoui82vfPtEWS8pKhLZiWHKbFvdXxsKDen32Uz71zpqLZfc"]
+
+# ==============================================================================
+# logging options
+# ==============================================================================
+#
+# Logging configuration is loaded from logging.ini by default.
+# If logging.ini exists, logging configuration added in this file will be ignored.
