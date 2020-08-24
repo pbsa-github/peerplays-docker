@@ -435,7 +435,7 @@ fi
 install_docker() {
     sudo apt update
     # curl/git used by docker, xz/lz4 used by dlblocks, jq used by tslogs/pclogs
-    sudo apt install curl git xz-utils liblz4-tool jq
+    sudo apt install curl git xz-utils liblz4-tool jq -y
     curl https://get.docker.com | sh
     if [ "$EUID" -ne 0 ]; then 
         echo "Adding user $(whoami) to docker group"
