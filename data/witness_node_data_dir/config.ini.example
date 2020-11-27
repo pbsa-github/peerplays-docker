@@ -1,11 +1,11 @@
 # Endpoint for P2P node to listen on
-p2p-endpoint = 0.0.0.0:2001
+p2p-endpoint = 0.0.0.0:9777
 
 # P2P nodes to connect to on startup (may specify multiple times)
 # seed-node = 
 
 # JSON array of P2P nodes to connect to on startup
-# seed-nodes = 
+seed-nodes = ["seed.ppy.blckchnd.com:6116","seed01.eifos.org:7777","pms.blockveritas.co:7777"] 
 
 # Pairs of [BLOCK_NUM,BLOCK_ID] that should be enforced as checkpoints.
 # checkpoint = 
