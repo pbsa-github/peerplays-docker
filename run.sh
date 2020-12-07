@@ -612,7 +612,7 @@ start() {
 	else
 	    cp ./peerplays-docker/data/witness_node_data_dir/config.ini.example ./peerplays-docker/data/witness_node_data_dir/config.ini
 		sed -i.tmp 's/required-participation\ \=\ .*$/required-participation\ \=\ false/' "$DATADIR"/witness_node_data_dir/config.ini
-		if sudo docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$PEERPLAYS_DOCKER_TAG" witness_node --data-dir=/peerplays/witness_node_data_dir;
+		if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$PEERPLAYS_DOCKER_TAG" witness_node --data-dir=/peerplays/witness_node_data_dir;
 		   then 
 			   msg bold green "Witness node started, now you can view the logs using ./run.sh logs"
 		   else
@@ -638,9 +638,7 @@ steem_replay() {
 
 peerplays_docker_replay() {
 	remove_seed_exists 1
-	echo "sudo docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node  --replay-blockchain --data-dir=/peerplays/witness_node_data_dir"
-
-	if sudo docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node  --replay-blockchain --data-dir=/peerplays/witness_node_data_dir
+	if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node  --replay-blockchain --data-dir=/peerplays/witness_node_data_dir
 	then 
 	  msg bold green " Replay Started."
 	else
@@ -994,7 +992,7 @@ start_son_regtest() {
         sudo docker start $DOCKER_NAME
     else
 	    cp ./peerplays-docker/data/witness_node_data_dir/config.ini.son-exists.example ./peerplays-docker/data/witness_node_data_dir/config.ini
-        sudo docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+        sudo docker run "${DPORTS[@]}" --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
     fi
 }
 
@@ -1295,9 +1293,9 @@ publish() {
 }
 
 set_variables(){
-BOOST_ROOT=$(grep BOOST_ROOT $HOME/.install_setting |awk -F= '{print $2}')
-DIRECTORY=$(grep DIRECTORY $HOME/.install_setting |awk -F= '{print $2}')
-BRANCH=$(grep BRANCH $HOME/.install_setting |awk -F= '{print $2}')
+BOOST_ROOT=$(grep BOOST_ROOT "$HOME"/.install_setting |awk -F= '{print $2}')
+DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting |awk -F= '{print $2}')
+BRANCH=$(grep BRANCH "$HOME"/.install_setting |awk -F= '{print $2}')
 }
 install_boost() {
 echo -e "\nInstalling peerplays blockchain with branch/tag $BRANCH in $DIRECTORY directory\n"
@@ -1313,7 +1311,7 @@ msg bold blue "Setting up directories for boost library installation"
 	mkdir -p "$DIRECTORY"/src
 	cd "$DIRECTORY"/src || exit
 	BOOST_ROOT=$DIRECTORY/src/boost_1_67_0
-	echo -e "BOOST_ROOT=$BOOST_ROOT"       >> $HOME/.install_setting
+	echo -e "BOOST_ROOT=$BOOST_ROOT"       >> "$HOME"/.install_setting
 msg bold blue "Downloading BOOST library"	
 	wget -c 'http://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.bz2/download' \
 		 -O boost_1_67_0.tar.bz2
@@ -1333,11 +1331,6 @@ fi
 
 install_peerplays() {
 set_variables
-echo $BOOST_ROOT
-echo $DIRECTORY
-echo $BRANCH
-echo "$DIRECTORY"/src
-
 msg bold blue "Setting up directories for peerplays Blockchain Installation"	  
 	cd "$DIRECTORY"/src  || exit
 msg bold blue "Downloading Peerplays blockchain source code"
@@ -1398,8 +1391,8 @@ read -r -p "Enter peerplays blockchain branch/tag to use for this installation [
 BRANCH=${BRANCH:-beatrice}
 #mkdir -p $DIRECTORY
 
-echo -e "DIRECTORY=$DIRECTORY" >>  $HOME/.install_setting
-echo -e "BRANCH=$BRANCH"       >> $HOME/.install_setting
+echo -e "DIRECTORY=$DIRECTORY" >>  "$HOME"/.install_setting
+echo -e "BRANCH=$BRANCH"       >> "$HOME"/.install_setting
 }
 # Usage: ./run.sh clean iaas
 iaas() {
@@ -1433,11 +1426,11 @@ set_variables
 			  msg bold red "Peerplays blockchain service uninstallation failed!!!"
 			  exit
 		  fi
-		INSTALL_ROOT_DIR="$(grep DIRECTORY $HOME/.install_setting |awk -F= '{print $2}'|xargs dirname)"
-		INSTALL_DIR="$(grep DIRECTORY $HOME/.install_setting |awk -F= '{print $2}'|xargs basename)"
+		INSTALL_ROOT_DIR="$(grep DIRECTORY "$HOME"/.install_setting |awk -F= '{print $2}'|xargs dirname)"
+		INSTALL_DIR="$(grep DIRECTORY "$HOME"/.install_setting |awk -F= '{print $2}'|xargs basename)"
 		cd "$INSTALL_ROOT_DIR" || exit
 		#Cleaning up the install directory
-		  if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf $HOME/.install_setting
+		  if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf "$HOME"/.install_setting
 		  then 
 			  msg bold green "Peerplays blockchain uninstalled successfully"
 			  exit
@@ -1461,11 +1454,11 @@ set_variables
 			  msg bold red "Peerplays blockchain service uninstallation failed!!!"
 			  exit
 		  fi
-		INSTALL_ROOT_DIR="$(grep DIRECTORY $HOME/.install_setting |awk -F= '{print $2}'|xargs dirname)"
-		INSTALL_DIR="$(grep DIRECTORY $HOME/.install_setting |awk -F= '{print $2}'|xargs basename)"
+		INSTALL_ROOT_DIR="$(grep DIRECTORY "$HOME"/.install_setting |awk -F= '{print $2}'|xargs dirname)"
+		INSTALL_DIR="$(grep DIRECTORY "$HOME"/.install_setting |awk -F= '{print $2}'|xargs basename)"
 		cd "$INSTALL_ROOT_DIR" || exit
 		#Cleaning up the install directory
-		  if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf $HOME/.install_setting
+		  if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf "$HOME"/.install_setting
 		  then 
 			  msg bold green "Peerplays blockchain uninstalled successfully"
 			  exit
@@ -1481,7 +1474,7 @@ uninstall_peerplays_docker(){
 set_variables
 if seed_exists
 then 
-  PEERPLAYS_DOCKER_TAG="$(grep PEERPLAYS_DOCKER_TAG $HOME/.install_setting |awk -F= '{print $2}')"
+  PEERPLAYS_DOCKER_TAG="$(grep PEERPLAYS_DOCKER_TAG "$HOME"/.install_setting |awk -F= '{print $2}')"
 	msg red "Stopping container '${DOCKER_NAME}' (allowing up to ${STOP_TIME} seconds before killing)..."
 	sudo docker stop -t ${STOP_TIME} $DOCKER_NAME
 	msg red "Removing the container '${DOCKER_NAME}'..."
@@ -1497,7 +1490,7 @@ else
 
 cleanup_dir(){
 msg blue "Cleaning up the directory"
-if sudo rm -rf peerplays-docker && rm -rf $HOME/.install_setting
+if sudo rm -rf peerplays-docker && rm -rf "$HOME"/.install_setting
 then 
 msg green "Cleaned up peerplays-docker directory and installation files"
 exit
@@ -1512,7 +1505,7 @@ uninstall() {
 tput clear
 figlet -tc "Peerplays Blockchain"
 
-if [ -f $HOME/.install_setting ]
+if [ -f "$HOME"/.install_setting ]
 then
    read -r -p "Do you want to uninstall peerplays blockchain: Y/N]: " UNINSTALL_RESPONSE
    UNINSTALL_RESPONSE=${UNINSTALL_RESPONSE:-N}
@@ -1520,7 +1513,7 @@ then
 
    if [ "$UNINSTALL_RESPONSE_IC" = "Y" ]
    then
-      CHECK_MODE=$(grep MODE $HOME/.install_setting |awk -F= '{print $2}')
+      CHECK_MODE=$(grep MODE "$HOME"/.install_setting |awk -F= '{print $2}')
       if [ "$CHECK_MODE" = "DOCKER" ]
       then
 	     uninstall_peerplays_docker
@@ -1557,18 +1550,18 @@ fi
 
 if [[ "$1" = "iaas" || "$1" = "iaab" || "$1" = "iaac" || "$1" = "install" ]]
 then
-  if [ -f $HOME/.install_setting ]
+  if [ -f "$HOME"/.install_setting ]
   then
-     CHECK_MODE=$(grep MODE $HOME/.install_setting |awk -F= '{print $2}')
+     CHECK_MODE=$(grep MODE "$HOME"/.install_setting |awk -F= '{print $2}')
      msg bold red "Already Peerplays Blockchain is installed in $CHECK_MODE mode. Exiting !!!"
      exit
   else
      if [ "$1" = "iaas" ]
      then
-        echo -e "MODE=SERVICE" >  $HOME/.install_setting	
+        echo -e "MODE=SERVICE" >  "$HOME"/.install_setting	
      elif [[ "$1" = "iaac" || ("$1" = "install" && "$2" = "son-dev") ]]
      then
-        echo -e "MODE=DOCKER" >  $HOME/.install_setting
+        echo -e "MODE=DOCKER" >  "$HOME"/.install_setting
      fi
   fi
 fi
@@ -1622,9 +1615,9 @@ case $1 in
         start_son_regtest)
                 start_son_regtest
                 ;;
-        replay)
-                replay
-                ;;
+#        replay)
+#                replay
+#                ;;
         replay_son)
                 replay_son
                 ;;
