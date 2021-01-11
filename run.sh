@@ -17,8 +17,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${DOCKER_NAME="peerplays"}"
 : "${DOCKER_BITCOIN_NAME="bitcoind-node"}"
 : "${DOCKER_BITCOIN_VOLUME="bitcoind-data"}"
+: "${BITCOIN_DOCKER_TAG="kylemanna/bitcoind"}"
 : "${DOCKER_NETWORK="son"}"
-: "${SON_WALLET="son-wallet"}"
+: "${BITCOIN_WALLET="son-wallet"}"
 : "${BTC_REGTEST_KEY="cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m"}"
 
 : "${DKR_DATA_MOUNT="/peerplays"}" # Mount $DATADIR onto this folder within the container
@@ -169,40 +170,50 @@ fi
 #source scripts/000_docker.sh
 
 help() {
-	tput clear
-	echo "Usage: $0 COMMAND [DATA]"
+	clear
+	echo "Usage: $0 COMMAND"
 	echo
 	echo "Commands:
 	
 $(msg bold "#---WITNESS NODE AS SERVICE---#")
 	
-$(msg blue "witness_install")              - Builds, Installs and Starts the Peerplays Blockchain as a Service
-$(msg blue "witness_install_only")         - Builds, Installs Peerplays Blockchain (Manual Start)
+$(msg blue "witness_install")               - Builds, Installs and Starts the Peerplays Blockchain as a Service
+$(msg blue "witness_install_only")          - Builds, Installs Peerplays Blockchain (Manual Start)
 
 $(msg bold "#---WITNESS NODE AS DOCKER CONTAINER---#")
 
-$(msg yellow "witness_docker_install")       - installs and starts ${DOCKER_NAME} docker container
-$(msg yellow "build")                        - builds a Peerplays docker image from source code
-$(msg yellow "start")                        - starts the ${DOCKER_NAME} container
-$(msg yellow "stop")                         - stops ${DOCKER_NAME} container
-$(msg yellow "kill")                         - force stop ${DOCKER_NAME} container (in event of ${DOCKER_NAME} container hanging indefinitely)
-$(msg yellow "restart")                      - restarts ${DOCKER_NAME} container
-$(msg yellow "status")                       - show status of ${DOCKER_NAME} container
+$(msg yellow "witness_docker_install")      - installs and starts ${DOCKER_NAME} witness docker container
+$(msg yellow "build")                       - builds a Peerplays witness docker image from source code
+$(msg yellow "start")                       - starts the ${DOCKER_NAME} witness docker container
+$(msg yellow "stop")                        - stops ${DOCKER_NAME} witness docker container
+$(msg yellow "kill")                        - force stop ${DOCKER_NAME} witness docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg yellow "restart")                     - restarts ${DOCKER_NAME} witness docker container
+$(msg yellow "status")                      - show status of ${DOCKER_NAME} witness docker container
+
+$(msg bold "#---SEED NODE AS DOCKER CONTAINER---#")
+
+$(msg yellow "seed_docker_install")         - installs and starts ${DOCKER_NAME} seed docker container
+$(msg yellow "start")                       - starts the ${DOCKER_NAME} seed docker container
+$(msg yellow "stop")                        - stops ${DOCKER_NAME} seed docker container
+$(msg yellow "kill")                        - force stop ${DOCKER_NAME} seed docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg yellow "restart")                     - restarts ${DOCKER_NAME} seed docker container
+$(msg yellow "status")                      - show status of ${DOCKER_NAME} seed docker container
 
 $(msg bold "#---SON AS DOCKER CONTAINER---#")
 
-$(msg magenta "son_docker_install")           - installs and starts ${DOCKER_NAME} SON docker container
-$(msg magenta "start")                        - starts the ${DOCKER_NAME} container
-$(msg magenta "stop")                         - stops ${DOCKER_NAME} container
-$(msg magenta "kill")                         - force stop ${DOCKER_NAME} container (in event of ${DOCKER_NAME} container hanging indefinitely)
-$(msg magenta "restart")                      - restarts ${DOCKER_NAME} container
-$(msg magenta "status")                       - show status of ${DOCKER_NAME} container
+$(msg magenta "son_docker_install")         - installs and starts ${DOCKER_NAME} SON docker container
+$(msg magenta "son_docker_regtest_install") - installs and starts ${DOCKER_NAME} SON docker container in test mode
+$(msg magenta "start")                      - starts the ${DOCKER_NAME} SON docker container
+$(msg magenta "stop")                       - stops ${DOCKER_NAME} SON docker container
+$(msg magenta "kill")                       - force stop ${DOCKER_NAME} SON docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg magenta "restart")                    - restarts ${DOCKER_NAME} SON docker container
+$(msg magenta "status")                     - show status of ${DOCKER_NAME} SON docker container
 
 $(msg bold "#---Common commands---#")
 $(msg green "logs")                         - shows the logs related to Peerplays Blockchain
-$(msg green "uninstall")                    - uninstalls the Peerplays blockchain installation
+$(msg green "uninstall")                    - uninstalls the Peerplays Blockchain installation
 $(msg green "replay")                       - starts replay of the installed Peerplays Blockchain installation
-	
+$(msg green "shm_size")                     - Resizes the ramdisk used for storing Peerplays's shared_memory at /dev/shm (ex: ./run.sh shm_size 64G)
 	"
 	echo
 	exit
@@ -320,11 +331,11 @@ build_local() {
 #
 
 build() {
-	read -r -p "Enter Peerplays blockchain branch/tag to use for building the docker image [Press Enter for default: master]: " BRANCH
+	read -r -p "Enter Peerplays blockchain repository branch/tag to be used for building the docker image [Press Enter for default: master]: " BRANCH
 	BRANCH=${BRANCH:-master}
-	read -r -p "Enter docker image name to be used[Press Enter for default: peerplays]: " PEERPLAYS_IMAGE
+	read -r -p "Enter the docker image name[Press Enter for default: peerplays]: " PEERPLAYS_IMAGE
 	PEERPLAYS_IMAGE=${PEERPLAYS_IMAGE:-peerplays}
-	read -r -p "Enter tag which you want to use[Press Enter for default: latest]: " PEERPLAYS_IMAGE_TAG
+	read -r -p "Enter the tag name to be used for the docker image[Press Enter for default: latest]: " PEERPLAYS_IMAGE_TAG
 	PEERPLAYS_IMAGE_TAG=${PEERPLAYS_IMAGE_TAG:-latest}
 	PEERPLAYS_DOCKER_TAG="$PEERPLAYS_IMAGE:$PEERPLAYS_IMAGE_TAG"
 
@@ -425,8 +436,8 @@ build_full() {
 # Downloads and installs the latest version of Docker using the Get Docker site
 # If Docker is already installed, it should update it.
 install_docker() {
-	#tput clear
-	figlet -tc "Peerplays Blockchain"
+	clear
+	#figlet -tc "Peerplays Blockchain"
 	msg bold green "Installing docker on the machine"
 
 	sudo apt update
@@ -450,30 +461,46 @@ install_docker() {
 # Default tag is normally someguy123/steem:latest (official builds by the creator of steem-docker).
 #
 install() {
-	tput clear
-	figlet -tc "Peerplays Blockchain"
+	clear
+	#figlet -tc "Peerplays Blockchain"
 
-	read -r -p "Enter tag which you want to use[Press Enter for default: latest]: " PEERPLAYS_IMAGE_TAG
+	read -r -p "Enter Peerplays docker tag which you want to use for the docker container[Press Enter for default: latest]: " PEERPLAYS_IMAGE_TAG
 	PEERPLAYS_IMAGE_TAG=${PEERPLAYS_IMAGE_TAG:-latest}
 	PEERPLAYS_DOCKER_TAG="datasecuritynode/peerplays:$PEERPLAYS_IMAGE_TAG"
 
-	read -r -p "Enter the seed nodes, use comma to separate multiple entries [Press Enter for default: "\"seed.ppy.blckchnd.com:6116\",\"seed01.eifos.org:7777\",\"pms.blockveritas.co:7777\""]: " SEED_NODES
-	SEED_NODES=${SEED_NODES:-'"seed.ppy.blckchnd.com:6116","seed01.eifos.org:7777","pms.blockveritas.co:7777"'}
-	echo -e "SEED_NODES=$SEED_NODES" >>"$HOME"/.install_setting
-
-	echo -e "PEERPLAYS_IMAGE_TAG=$PEERPLAYS_IMAGE_TAG" >>"$HOME"/.install_setting
-	echo -e "PEERPLAYS_DOCKER_TAG=$PEERPLAYS_DOCKER_TAG" >>"$HOME"/.install_setting
-
+		echo "Enter the seed nodes"
+		REPEAT=true
+		i=1
+		SEED_NODES=
+        while $REPEAT; do
+		    read -r -p "    seed node $i----> eg. 10.10.10.10:1234 ]: " SEED_NODES[$i]
+			if [ -z "${SEED_NODES}" ]; then
+			   SEED_NODES="\"${SEED_NODES[$i]}\""
+			else
+			   SEED_NODES="${SEED_NODES},\"${SEED_NODES[$i]}\""
+			fi
+			
+            read -r -p "Do you wish to add more nodes? (Y/N) ]: " REPEAT
+        if [[  "$REPEAT" = "Y"  ]]; then
+		   REPEAT=true
+		   i=$((i+1))
+		else
+		   REPEAT=false
+		fi
+        done
+		SEED_COUNT=$i
+		{ echo -e "SEED_NODES=$SEED_NODES"; echo -e "SEED_COUNT=$SEED_COUNT"; } >>"$HOME"/.install_setting
+		unset i SEED_COUNT REPEAT
+	
+	{ echo -e "PEERPLAYS_IMAGE_TAG=$PEERPLAYS_IMAGE_TAG"; echo -e "PEERPLAYS_DOCKER_TAG=$PEERPLAYS_DOCKER_TAG"; } >>"$HOME"/.install_setting
+	
 	git clone "${PEERPLAYS_DOCKER_SOURCE}" -b release
-
 	sudo cp ./peerplays-docker/data/witness_node_data_dir/config.ini.example ./peerplays-docker/data/witness_node_data_dir/config.ini
-	sed -i.tmp1 's/^required-participation\ \=\ .*$/required-participation\ \=\ false/' "$DATADIR"/witness_node_data_dir/config.ini
-	sed -i.tmp2 "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
-
+	sed -i.tmp 's/^required-participation\ \=\ .*$/required-participation\ \=\ false/' "$DATADIR"/witness_node_data_dir/config.ini
+	sed -i.tmp "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
 	msg bold green "Installing image $PEERPLAYS_IMAGE_TAG"
 	sleep 2
 	msg yellow " -> Loading image from ${PEERPLAYS_DOCKER_TAG}"
-
 	sudo docker pull "$PEERPLAYS_DOCKER_TAG"
 	msg green " -> Tagging as peerplays"
 	sudo docker tag "$PEERPLAYS_DOCKER_TAG" peerplays
@@ -500,6 +527,20 @@ install_full() {
 seed_exists() {
 	seedcount=$(sudo docker ps -a -f name="^/"$DOCKER_NAME"$" | wc -l)
 	if [[ $seedcount -eq 2 ]]; then
+		return 0
+	else
+		return -1
+	fi
+}
+
+# Internal Use Only
+# Checks if the container $DOCKER_NAME exists. Returns 0 if it does, -1 if not.
+# Usage:
+# if bitcoin_exists; then echo "true"; else "false"; fi
+#
+bitcoin_exists() {
+	bitcoindcount=$(sudo docker ps -a -f name="^/"$DOCKER_BITCOIN_NAME"$" | wc -l)
+	if [[ $bitcoindcount -eq 2 ]]; then
 		return 0
 	else
 		return -1
@@ -683,18 +724,32 @@ start() {
 		if [ "$CHECK_MODE" = "WITNESS_DOCKER" ]; then
 
 			if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$PEERPLAYS_DOCKER_TAG" witness_node --data-dir=/peerplays/witness_node_data_dir; then
-				msg bold green "Witness node started, now you can view the logs using ./run.sh logs"
+				msg bold green "Peerplays witness docker container started successfully, now you can view the logs using ./run.sh logs"
 			else
-				msg bold red "Witness node docker container failed to start!!!"
+				msg bold red "Peerplays witness node docker container failed to start!!!"
 				exit
 			fi
 		elif [ "$CHECK_MODE" = "SON_DOCKER" ]; then
 			if sudo docker run "${DPORTS[@]}" --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t datasecuritynode/peerplays:son-dev witness_node --data-dir=/peerplays/witness_node_data_dir; then
-				msg bold green " Installation successful, you can view the logs using ./run.sh logs"
+				msg bold green "Peerplays SON docker container started successfully, you can view the logs using ./run.sh logs"
 			else
-				msg bold red "SON docker container failed to start!!!"
+				msg bold red "Peerplays SON docker container failed to start!!!"
 				exit
 			fi
+		elif [ "$CHECK_MODE" = "SON_TEST_DOCKER" ]; then
+			if sudo docker run "${DPORTS[@]}" --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t datasecuritynode/peerplays:son-dev witness_node --data-dir=/peerplays/witness_node_data_dir; then
+				msg bold green "Peerplays SON docker container(test mode) started successfully, you can view the logs using ./run.sh logs"
+			else
+				msg bold red "Peerplays SON docker container(test mode) failed to start!!!"
+				exit
+			fi
+		elif [ "$CHECK_MODE" = "SEED_DOCKER" ]; then
+			if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name ${DOCKER_NAME} -t ${PEERPLAYS_DOCKER_TAG} witness_node --data-dir=/peerplays/witness_node_data_dir; then
+				msg bold green "Peerplays seed docker container started successfully, you can view the logs using ./run.sh logs"
+			else
+				msg bold red "Peerplays seed docker container failed to start!!!"
+				exit
+			fi	
 		fi
 	fi
 }
@@ -718,7 +773,7 @@ peerplays_docker_replay() {
 	remove_seed_exists 1
 	CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
 	if [ "$CHECK_MODE" = "WITNESS_DOCKER" ]; then
-		if sudo docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --replay-blockchain --data-dir=/peerplays/witness_node_data_dir; then
+		if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --replay-blockchain --data-dir=/peerplays/witness_node_data_dir; then
 			msg bold green "Replay of witness node started successfully"
 		else
 			msg bold red "Replay of witness node failed !!!"
@@ -1022,7 +1077,7 @@ simplecommitlog() {
 	git --no-pager log --pretty=format:"$commit_format" $args
 }
 
-# Internal Use Only
+#INTERNAL
 # Checks if the son network exists. Returns 0 if it does, -1 if not.
 # Usage:
 # if son_network_exists; then echo "true"; else "false"; fi
@@ -1062,15 +1117,17 @@ start_son_regtest() {
 		sudo docker network create ${DOCKER_NETWORK}
 	fi
 
-	msg bold green " -> Starting container $DOCKER_BITCOIN_NAME..."
+	msg bold green " -> Starting container $DOCKER_BITCOIN_NAME ..."
 	bitcoin_regtest_exists
 	if [[ $? == 0 ]]; then
 		sudo docker start $DOCKER_BITCOIN_NAME
 	else
-		sudo docker run -v $DOCKER_BITCOIN_VOLUME:/bitcoin --name=$DOCKER_BITCOIN_NAME -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
+	    BTC_REGTEST_CONF=$DIRECTORY/peerplays-docker/bitcoin/regtest/bitcoin.conf
+		sudo docker volume create ${DOCKER_BITCOIN_VOLUME}
+		sudo docker run -v $DOCKER_BITCOIN_VOLUME:/bitcoin --name=$DOCKER_BITCOIN_NAME -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v $BTC_REGTEST_CONF:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} ${BITCOIN_DOCKER_TAG}
 		sleep 40
-		sudo docker exec $DOCKER_BITCOIN_NAME bitcoin-cli createwallet ${SON_WALLET}
-		sudo docker exec $DOCKER_BITCOIN_NAME bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
+		sudo docker exec $DOCKER_BITCOIN_NAME bitcoin-cli createwallet ${BITCOIN_WALLET}
+		sudo docker exec $DOCKER_BITCOIN_NAME bitcoin-cli -rpcwallet=${BITCOIN_WALLET} importprivkey ${BTC_REGTEST_KEY}
 	fi
 
 	msg bold green " -> Starting container '${DOCKER_NAME}'..."
@@ -1078,19 +1135,78 @@ start_son_regtest() {
 	if [[ $? == 0 ]]; then
 		sudo docker start $DOCKER_NAME
 	else
-		PEERPLAYS_DOCKER_TAG="datasecuritynode/peerplays:son-dev"
-		echo -e "PEERPLAYS_DOCKER_TAG=$PEERPLAYS_DOCKER_TAG" >>"$HOME"/.install_setting
-		git clone "${PEERPLAYS_DOCKER_SOURCE}" -b "${BRANCH}"
-		cd peerplays-docker || exit
+		cd $DIRECTORY/peerplays-docker || exit
 		sudo cp ./example.env ./.env || exit
 		cd ./scripts/regtest || exit
 		sudo ./replace_btc_conf.sh
 		cd ../.. || exit
 		sudo cp ./data/witness_node_data_dir/config.ini.son-exists.example ./data/witness_node_data_dir/config.ini
-		SEED_NODES=$(grep SEED_NODES "$HOME"/.install_setting | awk -F= '{print $2}')
-		sed -i.tmp1 "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^enable-stale-production\ \=\ .*$/enable-stale-production\ \=\ true/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^#\ bitcoin-private-key\ \=\ .*$/bitcoin-private-key\ \=\ \[\"$BTC_PUBLIC_KEY\",\"$BTC_PRIVATE_KEY\"\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^#\ peerplays-private-key\ \=\ .*$/peerplays-private-key\ \=\ \[\"$SON_PUBLIC_KEY\",\"$SON_PRIVATE_KEY\"\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-wallet\ \=\ .*$/bitcoin-wallet\ \=\ $BITCOIN_WALLET/" "$DATADIR"/witness_node_data_dir/config.ini
 
 		if sudo docker run "${DPORTS[@]}" --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t datasecuritynode/peerplays:son-dev witness_node --data-dir=/peerplays/witness_node_data_dir; then
+			msg bold green " Installation successful, you can view the logs using ./run.sh logs"
+		fi
+
+	fi
+}
+
+# Usage: ./run.sh start_son
+# Creates and/or starts the Peerplays SON docker container.
+start_son() {
+	set_variables
+	msg bold green " -> Starting container '${DOCKER_NAME}'..."
+	seed_exists
+	if [[ $? == 0 ]]; then
+		sudo docker start $DOCKER_NAME
+	else
+		cd $DIRECTORY/peerplays-docker || exit
+		sudo cp ./data/witness_node_data_dir/config.ini.son-exists.example ./data/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^enable-stale-production\ \=\ .*$/enable-stale-production\ \=\ true/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-node-ip .*$/bitcoin-node-ip\ \=\ $BITCOIN_IP/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-node-zmq-port\ \=\ .*$/bitcoin-node-zmq-port\ \=\ $BITCOIN_ZMQ_PORT/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-node-rpc-port\ \=\ .*$/bitcoin-node-rpc-port\ \=\ $BITCOIN_RPC_PORT/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-node-rpc-user\ \=\ .*$/bitcoin-node-rpc-user\ \=\ $BITCOIN_RPC_USER/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-node-rpc-password\ \=\ .*$/bitcoin-node-rpc-password\ \=\ $BITCOIN_RPC_PASSWORD/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-wallet\ \=\ .*$/bitcoin-wallet\ \=\ $BITCOIN_WALLET/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^bitcoin-wallet-password\ \=\ .*$/bitcoin-wallet-password\ \=\ $BITCOIN_WALLET_PASSWORD/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^#\ bitcoin-private-key\ \=\ .*$/bitcoin-private-key\ \=\ \[\"$BTC_PUBLIC_KEY\",\"$BTC_PRIVATE_KEY\"\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^#\ peerplays-private-key\ \=\ .*$/peerplays-private-key\ \=\ \[\"$SON_PUBLIC_KEY\",\"$SON_PRIVATE_KEY\"\]/" "$DATADIR"/witness_node_data_dir/config.ini
+
+		if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name ${DOCKER_NAME} -t ${PEERPLAYS_DOCKER_TAG} witness_node --data-dir=/peerplays/witness_node_data_dir; then
+			msg bold green " Installation successful, you can view the logs using ./run.sh logs"
+		fi
+
+	fi
+}
+
+# Usage: ./run.sh start_seed
+# Creates and/or starts the Peerplays seed docker container.
+start_seed() {
+	set_variables
+	msg bold green " -> Starting container '${DOCKER_NAME}'..."
+	seed_exists
+	if [[ $? == 0 ]]; then
+		sudo docker start $DOCKER_NAME
+	else
+		cd $DIRECTORY/peerplays-docker || exit
+		sudo cp ./data/witness_node_data_dir/config.ini.example ./data/witness_node_data_dir/config.ini
+		#sudo cp ./data/witness_node_data_dir/seed_config.ini ./data/witness_node_data_dir/config.ini
+		#sed -i.tmp "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		
+		sed -i.tmp "0,/^p2p-seed-node\ \=\ .*$/s//seed-nodes\ \=\ \[$SEED_NODES\]/" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^plugin\ \=\ .*$/plugins\ \=\ market_history accounts_list affiliate_stats/" "$DATADIR"/witness_node_data_dir/config.ini
+		
+		sed -i.tmp "s/^p2p-seed-node\ \=\ .*$/#p2p-seed-node /" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^log-appender\ \=\ .*$/#log-appender /" "$DATADIR"/witness_node_data_dir/config.ini
+		sed -i.tmp "s/^log-logger\ \=\ .*$/#log-logger /" "$DATADIR"/witness_node_data_dir/config.ini
+		
+		sed -i.tmp 's/^required-participation\ \=\ .*$/required-participation\ \=\ false/' "$DATADIR"/witness_node_data_dir/config.ini		
+		if sudo docker run "${DPORTS[@]}" -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name ${DOCKER_NAME} -t ${PEERPLAYS_DOCKER_TAG} witness_node --data-dir=/peerplays/witness_node_data_dir; then
 			msg bold green " Installation successful, you can view the logs using ./run.sh logs"
 		fi
 
@@ -1391,11 +1507,49 @@ publish() {
 	msg bold green " >> Finished"
 }
 
-# Internal Use Only
+#INTERNAL
 set_variables() {
-	DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
-	BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
-	BOOST_ROOT=$(grep BOOST_ROOT "$HOME"/.install_setting | awk -F= '{print $2}')
+CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
+	if [[ "$CHECK_MODE" = "SERVICE" ]]; then
+	   DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BOOST_ROOT=$(grep BOOST_ROOT "$HOME"/.install_setting | awk -F= '{print $2}')
+	elif [[ "$CHECK_MODE" = "WITNESS_DOCKER" ]]; then
+	   DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
+	elif [[ "$CHECK_MODE" = "SON_DOCKER" ]]; then
+	   DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_WALLET=$(grep "BITCOIN_WALLET=" "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_WALLET_PASSWORD=$(grep BITCOIN_WALLET_PASSWORD "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SON_PUBLIC_KEY=$(grep SON_PUBLIC_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SON_PRIVATE_KEY=$(grep SON_PRIVATE_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BTC_PUBLIC_KEY=$(grep BTC_PUBLIC_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BTC_PRIVATE_KEY=$(grep BTC_PRIVATE_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_IP=$(grep BITCOIN_IP "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_ZMQ_PORT=$(grep BITCOIN_ZMQ_PORT "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_RPC_PORT=$(grep BITCOIN_RPC_PORT "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_RPC_USER=$(grep BITCOIN_RPC_USER "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_RPC_PASSWORD=$(grep BITCOIN_RPC_PASSWORD "$HOME"/.install_setting | awk -F= '{print $2}')
+       PEERPLAYS_DOCKER_TAG=$(grep PEERPLAYS_DOCKER_TAG "$HOME"/.install_setting | awk -F= '{print $2}')	   
+	   SEED_NODES=$(grep SEED_NODES "$HOME"/.install_setting | awk -F= '{print $2}')
+	  
+	elif [[ "$CHECK_MODE" = "SON_TEST_DOCKER" ]]; then
+	   DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_WALLET=$(grep "BITCOIN_WALLET=" "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BITCOIN_WALLET_PASSWORD=$(grep BITCOIN_WALLET_PASSWORD "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SON_PUBLIC_KEY=$(grep SON_PUBLIC_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SON_PRIVATE_KEY=$(grep SON_PRIVATE_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SEED_NODES=$(grep SEED_NODES "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BTC_PUBLIC_KEY=$(grep BTC_PUBLIC_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BTC_PRIVATE_KEY=$(grep BTC_PRIVATE_KEY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   
+	elif [[ "$CHECK_MODE" = "SEED_DOCKER" ]]; then
+	   DIRECTORY=$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}')
+	   BRANCH=$(grep BRANCH "$HOME"/.install_setting | awk -F= '{print $2}')
+	   SEED_NODES=$(grep SEED_NODES "$HOME"/.install_setting | awk -F= '{print $2}')
+	fi
 }
 # Internal Use Only
 install_boost() {
@@ -1429,10 +1583,9 @@ install_boost() {
 	fi
 }
 
-# Internal Use Only
+#INTERNAL
 install_peerplays() {
 	set_variables
-
 	msg bold blue "Setting up directories for Peerplays Blockchain Installation"
 	cd "$DIRECTORY"/src || exit
 	msg bold blue "Downloading Peerplays blockchain source code"
@@ -1448,9 +1601,10 @@ install_peerplays() {
 	rm -rf ./programs/witness_node/genesis.json
 	sed -i.tmp 's/\^#\ p2p-endpoint\ \=\ /p2p-endpoint\ \=\ 0.0.0.0:9777/' ./witness_node_data_dir/config.ini
 	sed -i.tmp 's/\^#\ rpc-endpoint\ \=\ /rpc-endpoint\ \=\ 127.0.0.1:8090/' ./witness_node_data_dir/config.ini
+	sed -i.tmp "s/^seed-nodes\ \=\ .*$/seed-nodes\ \=\ \[$SEED_NODES\]/" ./witness_node_data_dir/config.ini
 	msg bold blue "Installation completed"
 }
-
+#INTERNAL
 setup_peerplays_service() {
 	set_variables
 	msg bold blue "Creating Peerplays Blockchain Service"
@@ -1479,8 +1633,8 @@ setup_peerplays_service() {
 
 #INTERNAL
 pre_install() {
-	tput clear
-	figlet -tc "Peerplays Blockchain"
+	clear
+	#figlet -tc "Peerplays Blockchain"
 
 	if [ "$(grep ^NAME /etc/os-release | awk -F\" '{print $2}')" = "Ubuntu" ] && [ "$(grep ^VERSION_ID /etc/os-release | awk -F\" '{print $2}')" = "18.04" ]; then
 		msg bold green "Supported Platform"
@@ -1496,15 +1650,121 @@ pre_install() {
 	else
 		DIRECTORY=$(realpath "$DIRECTORY")
 	fi
-	read -r -p "Enter the Peerplays blockchain repository branch/tag to be used for the installation [Press Enter for default: beatrice]: " BRANCH
-	BRANCH=${BRANCH:-beatrice}
-	#mkdir -p $DIRECTORY
 
+	#mkdir -p $DIRECTORY
 	CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
+	
+	if [[ "$CHECK_MODE" = "SERVICE" ]]; then
+	    read -r -p "Enter the Peerplays blockchain repository branch/tag to be used for the installation [Press Enter for default: master]: " BRANCH
+	    BRANCH=${BRANCH:-master}
+		echo "Enter the seed nodes"
+		REPEAT=true
+		i=1
+		SEED_NODES=
+        while $REPEAT; do
+		    read -r -p "    seed node $i----> eg. 10.10.10.10:1234 ]: " SEED_NODES[$i]
+			if [ -z "${SEED_NODES}" ]; then
+			   SEED_NODES="\"${SEED_NODES[$i]}\""
+			else
+			   SEED_NODES="${SEED_NODES},\"${SEED_NODES[$i]}\""
+			fi
+			
+            read -r -p "Do you wish to add more nodes? (Y/N) ]: " REPEAT
+        if [[  "$REPEAT" = "Y"  ]]; then
+		   REPEAT=true
+		   i=$((i+1))
+		else
+		   REPEAT=false
+		fi
+        done
+		SEED_COUNT=$i
+		{ echo -e "SEED_NODES=$SEED_NODES"; echo -e "SEED_COUNT=$SEED_COUNT"; } >>"$HOME"/.install_setting
+		unset i SEED_COUNT REPEAT
+		
+	elif [[ "$CHECK_MODE" = "SEED_DOCKER" ]]; then
+	    read -r -p "Enter the Peerplays blockchain repository branch/tag to be used for the installation [Press Enter for default: master]: " BRANCH
+	    BRANCH=${BRANCH:-master}
+	    msg bold blue "Downloading Peerplays blockchain source code"		
+		git clone "${PEERPLAYS_DOCKER_SOURCE}" -b "${BRANCH}"
+	    read -r -p "Enter the Peerplays blockchain Docker image tag to be used for the installation [Press Enter for default: latest]: " PEERPLAYS_IMAGE_TAG
+	    PEERPLAYS_IMAGE_TAG=${PEERPLAYS_IMAGE_TAG:-"latest"}
+	    PEERPLAYS_DOCKER_TAG="datasecuritynode/peerplays:${PEERPLAYS_IMAGE_TAG}"
+		
+		echo "Enter the seed nodes"
+		REPEAT=true
+		i=1
+		SEED_NODES=
+        while $REPEAT; do
+		    read -r -p "    seed node $i----> eg. 10.10.10.10:1234 ]: " SEED_NODES[$i]
+			if [ -z "${SEED_NODES}" ]; then
+			   SEED_NODES="\"${SEED_NODES[$i]}\""
+			else
+			   SEED_NODES="${SEED_NODES},\"${SEED_NODES[$i]}\""
+			fi
+			
+            read -r -p "Do you wish to add more nodes? (Y/N) ]: " REPEAT
+        if [[  "$REPEAT" = "Y"  ]]; then
+		   REPEAT=true
+		   i=$((i+1))
+		else
+		   REPEAT=false
+		fi
+        done
+		SEED_COUNT=$i
+		{ echo -e "SEED_NODES=$SEED_NODES"; echo -e "SEED_COUNT=$SEED_COUNT"; echo -e "PEERPLAYS_DOCKER_TAG=$PEERPLAYS_DOCKER_TAG"; } >>"$HOME"/.install_setting
+		unset i SEED_COUNT REPEAT
+		
+	elif [[ "$CHECK_MODE" = "SON_DOCKER" || "$CHECK_MODE" = "SON_TEST_DOCKER" ]]; then
+	    read -r -p "Enter the Peerplays blockchain repository branch/tag to be used for the installation [Press Enter for default: master]: " BRANCH
+	    BRANCH=${BRANCH:-master}
+	    msg bold blue "Downloading Peerplays blockchain source code"		
+		git clone "${PEERPLAYS_DOCKER_SOURCE}" -b "${BRANCH}"
+	    read -r -p "Enter the Peerplays blockchain Docker image tag to be used for the installation [Press Enter for default: son-dev]: " PEERPLAYS_IMAGE_TAG
+	    PEERPLAYS_IMAGE_TAG=${PEERPLAYS_IMAGE_TAG:-"son-dev"}
+	    PEERPLAYS_DOCKER_TAG="datasecuritynode/peerplays:${PEERPLAYS_IMAGE_TAG}"
+	    read -r -p "Enter the Bitcoin wallet name [Press Enter for default: son-wallet]: " BITCOIN_WALLET
+	    BITCOIN_WALLET=${BITCOIN_WALLET:-"son-wallet"}
+	    read -r -p "Enter the Bitcoin wallet password [Press Enter for default: peerplaysson]: " BITCOIN_WALLET_PASSWORD
+	    BITCOIN_WALLET_PASSWORD=${BITCOIN_WALLET_PASSWORD:-peerplaysson}
+	    read -r -p "Enter the SON public key: " SON_PUBLIC_KEY
+	    read -r -p "Enter the SON private key: " SON_PRIVATE_KEY
+		
+		echo "Enter the SON seed nodes"
+		REPEAT=true
+		i=1
+		SEED_NODES=
+        while $REPEAT; do
+		    read -r -p "    SON seed node $i----> eg. 10.10.10.10:1234 ]: " SEED_NODES[$i]
+			if [ -z "${SEED_NODES}" ]; then
+			   SEED_NODES="\"${SEED_NODES[$i]}\""
+			else
+			   SEED_NODES="${SEED_NODES},\"${SEED_NODES[$i]}\""
+			fi
+			
+            read -r -p "Do you wish to add more nodes? (Y/N) ]: " REPEAT
+        if [[  "$REPEAT" = "Y"  ]]; then
+		   REPEAT=true
+		   i=$((i+1))
+		else
+		   REPEAT=false
+		fi
+        done
+		SEED_COUNT=$i
+	    read -r -p "Enter the Bitcoin public key: " BTC_PUBLIC_KEY
+	    read -r -p "Enter the Bitcoin private key: " BTC_PRIVATE_KEY
+		{ echo -e "BITCOIN_WALLET=$BITCOIN_WALLET"; echo -e "BITCOIN_WALLET_PASSWORD=$BITCOIN_WALLET_PASSWORD"; echo -e "SON_PUBLIC_KEY=$SON_PUBLIC_KEY"; echo -e "SON_PRIVATE_KEY=$SON_PRIVATE_KEY"; echo -e "SEED_COUNT=$SEED_COUNT";  echo -e "SEED_NODES=$SEED_NODES"; echo -e "BTC_PUBLIC_KEY=$BTC_PUBLIC_KEY"; echo -e "BTC_PRIVATE_KEY=$BTC_PRIVATE_KEY"; echo -e "PEERPLAYS_DOCKER_TAG=$PEERPLAYS_DOCKER_TAG"; } >>"$HOME"/.install_setting
+		unset i SEED_COUNT REPEAT
+	fi
+	
 	if [[ "$CHECK_MODE" = "SON_DOCKER" ]]; then
-		read -r -p "Enter the seed nodes, use comma to separate multiple entries [Press Enter for default: \"96.46.49.1:9777\"]: " SEED_NODES
-		SEED_NODES=${SEED_NODES:-"\"96.46.49.1:9777\""}
-		echo -e "SEED_NODES=$SEED_NODES" >>"$HOME"/.install_setting
+	    read -r -p "Enter the IP address of the Bitcoin node: " BITCOIN_IP	
+	    read -r -p "Enter the Bitcoin node ZMQ Port[Press Enter for default: 11111]: " BITCOIN_ZMQ_PORT
+	    BITCOIN_ZMQ_PORT=${BITCOIN_ZMQ_PORT:-"11111"}	
+		read -r -p "Enter the Bitcoin node RPC Port[Press Enter for default: 8332]: " BITCOIN_RPC_PORT
+	    BITCOIN_RPC_PORT=${BITCOIN_RPC_PORT:-"8332"}	
+		read -r -p "Enter the Bitcoin node RPC username: " BITCOIN_RPC_USER
+		read -r -p "Enter the Bitcoin node RPC password: " BITCOIN_RPC_PASSWORD
+		{ echo -e "BITCOIN_IP=$BITCOIN_IP"; echo -e "BITCOIN_ZMQ_PORT=$BITCOIN_ZMQ_PORT"; echo -e "BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT"; echo -e "BITCOIN_RPC_USER=$BITCOIN_RPC_USER"; echo -e "BITCOIN_RPC_PASSWORD=$BITCOIN_RPC_PASSWORD";} >> "$HOME"/.install_setting
 	fi
 
 	echo -e "DIRECTORY=$DIRECTORY" >>"$HOME"/.install_setting
@@ -1527,10 +1787,22 @@ witness_install_only() {
 # Usage: ./run.sh son_docker_install
 son_docker_install() {
 	pre_install
+	start_son
+}
+
+# Usage: ./run.sh seed_docker_install
+seed_docker_install() {
+	pre_install
+	start_seed
+}
+
+# Usage: ./run.sh son_docker_regtest_install
+son_docker_regtest_install() {
+	pre_install
 	start_son_regtest
 }
 
-# Internal Use Only
+#INTERNAL
 uninstall_peerplays() {
 	set_variables
 	if sudo systemctl list-unit-files --type service | grep peerplays.service; then
@@ -1587,13 +1859,13 @@ uninstall_peerplays() {
 	fi
 }
 
-# Internal Use Only
+#INTERNAL
 uninstall_peerplays_docker() {
 	set_variables
 	if seed_exists; then
 		PEERPLAYS_DOCKER_TAG="$(grep PEERPLAYS_DOCKER_TAG "$HOME"/.install_setting | awk -F= '{print $2}')"
 		msg red "Stopping container '${DOCKER_NAME}' (allowing up to ${STOP_TIME} seconds before killing)..."
-		sudo docker stop -t ${STOP_TIME} $DOCKER_NAME
+		sudo docker stop -t "${STOP_TIME}" "$DOCKER_NAME"
 		msg red "Removing the container '${DOCKER_NAME}'..."
 		sudo docker rm "$DOCKER_NAME"
 		msg red "Removing the '${DOCKER_NAME}' container image ..."
@@ -1605,7 +1877,26 @@ uninstall_peerplays_docker() {
 	fi
 }
 
-# Internal Use Only
+#INTERNAL
+uninstall_bitcoin_docker() {
+	set_variables
+	if bitcoin_exists; then
+		msg red "Stopping container '${DOCKER_BITCOIN_NAME}' (allowing up to ${STOP_TIME} seconds before killing)..."
+		sudo docker stop -t "${STOP_TIME}" "$DOCKER_BITCOIN_NAME"
+		msg red "Removing the container '${DOCKER_BITCOIN_NAME}'..."
+		sudo docker rm "$DOCKER_BITCOIN_NAME"
+		msg red "Removing the '${DOCKER_BITCOIN_NAME}' container image ..."
+		sudo docker rmi "$DOCKER_BITCOIN_NAME"
+		sudo docker rmi "$BITCOIN_DOCKER_TAG"
+        sudo docker volume rm "${DOCKER_BITCOIN_VOLUME}"
+		sudo docker network rm "${DOCKER_NETWORK}"
+		msg green "Peerplays Blockchain successfully uninstalled ..."
+	else
+		msg bold red "Bitcoin Docker container not found in the system"
+	fi
+}
+
+#INTERNAL
 cleanup_dir() {
 	msg blue "Cleaning up the directory"
 	if sudo rm -rf peerplays-docker && rm -rf "$HOME"/.install_setting; then
@@ -1619,8 +1910,8 @@ cleanup_dir() {
 
 # Usage: ./run.sh uninstall
 uninstall() {
-	tput clear
-	figlet -tc "Peerplays Blockchain"
+	clear
+	#figlet -tc "Peerplays Blockchain"
 
 	if [ -f "$HOME"/.install_setting ]; then
 		read -r -p "Do you want to uninstall peerplays blockchain: Y/N]: " UNINSTALL_RESPONSE
@@ -1629,10 +1920,14 @@ uninstall() {
 
 		if [ "$UNINSTALL_RESPONSE_IC" = "Y" ]; then
 			CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
-			if [[ "$CHECK_MODE" = "WITNESS_DOCKER" || "$CHECK_MODE" = "SON_DOCKER" ]]; then
+			if [[  "$CHECK_MODE" = "SON_TEST_DOCKER" ]]; then
+				uninstall_peerplays_docker
+				uninstall_bitcoin_docker
+				cleanup_dir
+			elif [[ "$CHECK_MODE" = "WITNESS_DOCKER" || "$CHECK_MODE" = "SON_DOCKER" || "$CHECK_MODE" = "SEED_DOCKER" ]]; then
 				uninstall_peerplays_docker
 				cleanup_dir
-			elif [ "$CHECK_MODE" = "SERVICE" ]; then
+			elif [[ "$CHECK_MODE" = "SERVICE" ]]; then
 				uninstall_peerplays
 			fi
 		else
@@ -1660,7 +1955,7 @@ if [ "$#" -lt 1 ]; then
 	help
 fi
 
-if [[ "$1" = "witness_install" || "$1" = "witness_install_only" || "$1" = "witness_docker_install" || "$1" = "son_docker_install" || "$1" = "install" || "$1" = "build" ]]; then
+if [[ "$1" = "witness_install" || "$1" = "witness_install_only" || "$1" = "witness_docker_install" || "$1" = "son_docker_install"  || "$1" = "son_docker_regtest_install" || "$1" = "seed_docker_install" || "$1" = "install" || "$1" = "build" ]]; then
 	if [ -f "$HOME"/.install_setting ]; then
 		CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
 		msg bold red "Already Peerplays Blockchain is installed in $CHECK_MODE mode. Exiting !!!"
@@ -1672,6 +1967,10 @@ if [[ "$1" = "witness_install" || "$1" = "witness_install_only" || "$1" = "witne
 			echo -e "MODE=WITNESS_DOCKER" >"$HOME"/.install_setting
 		elif [[ "$1" = "son_docker_install" ]]; then
 			echo -e "MODE=SON_DOCKER" >"$HOME"/.install_setting
+		elif [[ "$1" = "son_docker_regtest_install" ]]; then
+			echo -e "MODE=SON_TEST_DOCKER" >"$HOME"/.install_setting
+		elif [[ "$1" = "seed_docker_install" ]]; then
+			echo -e "MODE=SEED_DOCKER" >"$HOME"/.install_setting
 
 		fi
 
@@ -1680,19 +1979,19 @@ fi
 
 case $1 in
 build)
-	msg bold magenta "This will build the Peerplays docker image from source code."
+	msg bold magenta "This will build a Peerplays Blockchain docker image from source code."
 	build "${@:2}"
 	;;
 witness_install)
-	msg bold magenta "Builds, Installs and Starts the Peerplays Blockchain as a Service."
+	msg bold magenta "This will build, install and start the Peerplays witness as a service."
 	witness_install "${@:2}"
 	;;
 witness_install_only)
-	msg bold magenta "This will build and install Peerplays Blockchain"
+	msg bold magenta "This will build and install Peerplays witness  as a service"
 	witness_install_only "${@:2}"
 	;;
 uninstall)
-	msg bold magenta "This will remove the Peerplays installation."
+	msg bold magenta "This will uninstall Peerplays Blockchain installation."
 	uninstall "${@:2}"
 	;;
 witness_docker_install)
@@ -1700,8 +1999,16 @@ witness_docker_install)
 	witness_docker_install "${@:2}"
 	;;
 son_docker_install)
-	msg bold magenta "This will install and start Peerplays son docker container"
+	msg bold magenta "This will install and start Peerplays SON docker container"
 	son_docker_install "${@:2}"
+	;;
+son_docker_regtest_install)
+	msg bold magenta "This will install and start Peerplays SON docker container in test mode"
+	son_docker_regtest_install "${@:2}"
+	;;
+seed_docker_install)
+	msg bold magenta "This will install and start Peerplays seed docker container"
+	seed_docker_install "${@:2}"
 	;;
 build_full)
 	msg bold magenta "You may want to use '$0 install_full' for a binary image instead, it's faster."
@@ -1732,6 +2039,7 @@ start_son_regtest)
 	start_son_regtest
 	;;
 replay)
+	msg bold magenta "This will start replay of the installed Peerplays Blockchain"
 	replay "${@:2}"
 	;;
 memory_replay)
