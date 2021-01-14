@@ -177,43 +177,43 @@ help() {
 	
 $(msg bold "#---WITNESS NODE AS SERVICE---#")
 	
-$(msg blue "witness_install")               - Builds, Installs and Starts the Peerplays Blockchain as a Service
-$(msg blue "witness_install_only")          - Builds, Installs Peerplays Blockchain (Manual Start)
+$(msg  "witness_install")             - Builds, Installs and Starts the Peerplays Blockchain as a Service
+$(msg  "witness_install_only")        - Builds, Installs Peerplays Blockchain (Manual Start)
 
 $(msg bold "#---WITNESS NODE AS DOCKER CONTAINER---#")
 
-$(msg yellow "witness_docker_install")      - installs and starts ${DOCKER_NAME} witness docker container
-$(msg yellow "build")                       - builds a Peerplays witness docker image from source code
-$(msg yellow "start")                       - starts the ${DOCKER_NAME} witness docker container
-$(msg yellow "stop")                        - stops ${DOCKER_NAME} witness docker container
-$(msg yellow "kill")                        - force stop ${DOCKER_NAME} witness docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
-$(msg yellow "restart")                     - restarts ${DOCKER_NAME} witness docker container
-$(msg yellow "status")                      - show status of ${DOCKER_NAME} witness docker container
+$(msg  "witness_docker_install")      - installs and starts ${DOCKER_NAME} witness docker container
+$(msg  "build")                       - builds a Peerplays witness docker image from source code
+$(msg  "start")                       - starts the ${DOCKER_NAME} witness docker container
+$(msg  "stop")                        - stops ${DOCKER_NAME} witness docker container
+$(msg  "kill")                        - force stop ${DOCKER_NAME} witness docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg  "restart")                     - restarts ${DOCKER_NAME} witness docker container
+$(msg  "status")                      - show status of ${DOCKER_NAME} witness docker container
 
 $(msg bold "#---SEED NODE AS DOCKER CONTAINER---#")
 
-$(msg yellow "seed_docker_install")         - installs and starts ${DOCKER_NAME} seed docker container
-$(msg yellow "start")                       - starts the ${DOCKER_NAME} seed docker container
-$(msg yellow "stop")                        - stops ${DOCKER_NAME} seed docker container
-$(msg yellow "kill")                        - force stop ${DOCKER_NAME} seed docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
-$(msg yellow "restart")                     - restarts ${DOCKER_NAME} seed docker container
-$(msg yellow "status")                      - show status of ${DOCKER_NAME} seed docker container
+$(msg  "seed_docker_install")         - installs and starts ${DOCKER_NAME} seed docker container
+$(msg  "start")                       - starts the ${DOCKER_NAME} seed docker container
+$(msg  "stop")                        - stops ${DOCKER_NAME} seed docker container
+$(msg  "kill")                        - force stop ${DOCKER_NAME} seed docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg  "restart")                     - restarts ${DOCKER_NAME} seed docker container
+$(msg  "status")                      - show status of ${DOCKER_NAME} seed docker container
 
 $(msg bold "#---SON AS DOCKER CONTAINER---#")
 
-$(msg magenta "son_docker_install")         - installs and starts ${DOCKER_NAME} SON docker container
-$(msg magenta "son_docker_regtest_install") - installs and starts ${DOCKER_NAME} SON docker container in test mode
-$(msg magenta "start")                      - starts the ${DOCKER_NAME} SON docker container
-$(msg magenta "stop")                       - stops ${DOCKER_NAME} SON docker container
-$(msg magenta "kill")                       - force stop ${DOCKER_NAME} SON docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
-$(msg magenta "restart")                    - restarts ${DOCKER_NAME} SON docker container
-$(msg magenta "status")                     - show status of ${DOCKER_NAME} SON docker container
+$(msg  "son_docker_install")          - installs and starts ${DOCKER_NAME} SON docker container
+$(msg  "son_docker_regtest_install")  - installs and starts ${DOCKER_NAME} SON docker container in test mode
+$(msg  "start")                       - starts the ${DOCKER_NAME} SON docker container
+$(msg  "stop")                        - stops ${DOCKER_NAME} SON docker container
+$(msg  "kill")                        - force stop ${DOCKER_NAME} SON docker container (in event of ${DOCKER_NAME} container hanging indefinitely)
+$(msg  "restart")                     - restarts ${DOCKER_NAME} SON docker container
+$(msg  "status")                      - show status of ${DOCKER_NAME} SON docker container
 
 $(msg bold "#---Common commands---#")
-$(msg green "logs")                         - shows the logs related to Peerplays Blockchain
-$(msg green "uninstall")                    - uninstalls the Peerplays Blockchain installation
-$(msg green "replay")                       - starts replay of the installed Peerplays Blockchain installation
-$(msg green "shm_size")                     - Resizes the ramdisk used for storing Peerplays's shared_memory at /dev/shm (ex: ./run.sh shm_size 64G)
+$(msg  "logs")                        - shows the logs related to Peerplays Blockchain
+$(msg  "uninstall")                   - uninstalls the Peerplays Blockchain installation
+$(msg  "replay")                      - starts replay of the installed Peerplays Blockchain installation
+$(msg  "shm_size")                    - Resizes the ramdisk used for storing Peerplays's shared_memory at /dev/shm (ex: ./run.sh shm_size 64G)
 	"
 	echo
 	exit
@@ -811,7 +811,7 @@ peerplays_replay() {
 				echo -e "WantedBy=mult-user.target"
 			} >>"$INSTALL_ABS_DIR"/peerplays-replay.service
 			msg bold blue "Starting Peerplays Blockchain replay service"
-			sudo cp "$INSTALL_ABS_DIR"/peerplays-replay.service /etc/systemd/system && sudo systemctl start peerplays-replay.service
+			sudo mv "$INSTALL_ABS_DIR"/peerplays-replay.service /etc/systemd/system && sudo systemctl start peerplays-replay.service
 			sleep 30
 		else
 			msg bold blue "Starting Peerplays Blockchain replay service"
@@ -829,7 +829,7 @@ peerplays_replay() {
 
 # Usage: ./run.sh replay
 replay() {
-	if [ -f "$HOME"/.install_setting ]; then
+	if is_installed; then
 		if ! sudo systemctl list-unit-files --type service | grep peerplays; then
 			peerplays_docker_replay
 		else
@@ -937,22 +937,26 @@ remote_wallet() {
 # Shows the last 30 log lines of the running steem container, and follows the log until you press ctrl-c
 #
 logs() {
-	if [ "$(systemctl is-active peerplays.service)" = "active" ]; then
-		msg bold green "Tailing Peerplays service logs"
-		#WITNESS_SCRIPT=`systemctl status peerplays|grep ExecStart |awk -F\= '{print $2}'|sed -e 's/[^ ]* *$//'`
-		#WITNESS_SCRIPT_DIR=`systemctl status peerplays|grep witness|grep peerplays|awk '{print $2}'|xargs dirname`
-		sudo journalctl -f -u peerplays
-		exit
-	elif [ "$(systemctl is-active peerplays-replay.service)" = "active" ]; then
-		msg bold green "Tailing Peerplays service logs"
-		#WITNESS_SCRIPT=`systemctl status peerplays|grep ExecStart |awk -F\= '{print $2}'|sed -e 's/[^ ]* *$//'`
-		#WITNESS_SCRIPT_DIR=`systemctl status peerplays|grep witness|grep peerplays|awk '{print $2}'|xargs dirname`
-		sudo journalctl -f -u peerplays-replay
-		exit
+	if is_installed; then
+	  if [ "$(systemctl is-active peerplays.service)" = "active" ]; then
+	  	msg bold green "Tailing Peerplays service logs"
+	  	#WITNESS_SCRIPT=`systemctl status peerplays|grep ExecStart |awk -F\= '{print $2}'|sed -e 's/[^ ]* *$//'`
+	  	#WITNESS_SCRIPT_DIR=`systemctl status peerplays|grep witness|grep peerplays|awk '{print $2}'|xargs dirname`
+	  	sudo journalctl -f -u peerplays
+	  	exit
+	  elif [ "$(systemctl is-active peerplays-replay.service)" = "active" ]; then
+	  	msg bold green "Tailing Peerplays service logs"
+	  	#WITNESS_SCRIPT=`systemctl status peerplays|grep ExecStart |awk -F\= '{print $2}'|sed -e 's/[^ ]* *$//'`
+	  	#WITNESS_SCRIPT_DIR=`systemctl status peerplays|grep witness|grep peerplays|awk '{print $2}'|xargs dirname`
+	  	sudo journalctl -f -u peerplays-replay
+	  	exit
+	  else
+	  	msg blue "DOCKER LOGS: (press ctrl-c to exit) "
+	  	sudo docker logs -f --tail=30 "$DOCKER_NAME"
+	  	exit
+	  fi
 	else
-		msg blue "DOCKER LOGS: (press ctrl-c to exit) "
-		sudo docker logs -f --tail=30 "$DOCKER_NAME"
-		exit
+		msg bold red "Peerplays Blockchain not present on this server/not installed using run.sh"
 	fi
 	#echo $RED"INFO AND DEBUG LOGS: "$RESET
 	#tail -n 30 $DATADIR/{info.log,debug.log}
@@ -1597,6 +1601,7 @@ install_peerplays() {
 	cmake -DBOOST_ROOT="$BOOST_ROOT" -DCMAKE_BUILD_TYPE=Release
 	msg bold blue "Building Peerplays Blockchain code, it will take some time to complete!!!"
 	make -j"$(nproc)"
+	rm -rf ./programs/witness_node/genesis.json
 	./programs/witness_node/witness_node --create-genesis-json ./programs/witness_node/genesis.json
 	rm -rf ./programs/witness_node/genesis.json
 	sed -i.tmp 's/\^#\ p2p-endpoint\ \=\ /p2p-endpoint\ \=\ 0.0.0.0:9777/' ./witness_node_data_dir/config.ini
@@ -1621,7 +1626,7 @@ setup_peerplays_service() {
 	} >>"$DIRECTORY"/peerplays.service
 
 	msg bold blue "Starting Peerplays Blockchain Service"
-	sudo cp "$DIRECTORY"/peerplays.service /etc/systemd/system && sudo systemctl start peerplays.service
+	sudo mv "$DIRECTORY"/peerplays.service /etc/systemd/system && sudo systemctl start peerplays.service
 	sleep 30
 	if [ "$(systemctl is-active peerplays.service)" = "active" ]; then
 		msg bold green "Peerplays witness node started successfully. You can monitor the logs using ./run.sh logs"
@@ -1635,14 +1640,6 @@ setup_peerplays_service() {
 pre_install() {
 	clear
 	#figlet -tc "Peerplays Blockchain"
-
-	if [ "$(grep ^NAME /etc/os-release | awk -F\" '{print $2}')" = "Ubuntu" ] && [ "$(grep ^VERSION_ID /etc/os-release | awk -F\" '{print $2}')" = "18.04" ]; then
-		msg bold green "Supported Platform"
-	else
-		msg bold red "This OS Platform is not supported!!!!!"
-		msg nots bold red "\n$(hostnamectl)"
-		exit
-	fi
 
 	read -r -p "Enter the directory where you want to install Peerplays blockchain [Press Enter for default: $PWD]: " DIRECTORY
 	if [ -z "$DIRECTORY" ]; then
@@ -1823,7 +1820,7 @@ uninstall_peerplays() {
 		INSTALL_DIR="$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}' | xargs basename)"
 		cd "$INSTALL_ROOT_DIR" || exit
 		#Cleaning up the install directory
-		if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf "$HOME"/.install_setting; then
+		if sudo rm -rf "$INSTALL_DIR"/src && sudo rm -rf "$INSTALL_DIR"/witness_node_data_dir && sudo rm -rf "$HOME"/.install_setting; then
 			msg bold green "Peerplays blockchain uninstalled successfully"
 			exit
 		else
@@ -1848,7 +1845,7 @@ uninstall_peerplays() {
 		INSTALL_DIR="$(grep DIRECTORY "$HOME"/.install_setting | awk -F= '{print $2}' | xargs basename)"
 		cd "$INSTALL_ROOT_DIR" || exit
 		#Cleaning up the install directory
-		if sudo rm -rf "$INSTALL_DIR" && sudo rm -rf "$HOME"/.install_setting; then
+		if sudo rm -rf "$INSTALL_DIR"/src && sudo rm -rf "$INSTALL_DIR"/witness_node_data_dir && sudo rm -rf "$HOME"/.install_setting; then
 			msg bold green "Peerplays blockchain uninstalled successfully"
 			exit
 		else
@@ -1913,7 +1910,7 @@ uninstall() {
 	clear
 	#figlet -tc "Peerplays Blockchain"
 
-	if [ -f "$HOME"/.install_setting ]; then
+	if is_installed; then
 		read -r -p "Do you want to uninstall peerplays blockchain: Y/N]: " UNINSTALL_RESPONSE
 		UNINSTALL_RESPONSE=${UNINSTALL_RESPONSE:-N}
 		UNINSTALL_RESPONSE_IC="$(echo "$UNINSTALL_RESPONSE" | tr '[:lower:]' '[:upper:]')"
@@ -1951,12 +1948,35 @@ witness_docker_install() {
 	fi
 }
 
+# INTERNAL
+os_check(){
+
+	if [ "$(grep ^NAME /etc/os-release | awk -F\" '{print $2}')" = "Ubuntu" ] && [ "$(grep ^VERSION_ID /etc/os-release | awk -F\" '{print $2}')" = "18.04" ]; then
+		msg bold green "Supported Platform"
+	else
+		msg bold red "This OS Platform is not supported!!!!!"
+		msg nots bold red "\n$(hostnamectl)"
+		exit
+	fi
+
+}
+
+# INTERNAL
+is_installed(){
+
+  if [ -f "$HOME"/.install_setting ]; then
+    return 0
+  else
+    return -1
+  fi
+}
+
 if [ "$#" -lt 1 ]; then
 	help
 fi
 
 if [[ "$1" = "witness_install" || "$1" = "witness_install_only" || "$1" = "witness_docker_install" || "$1" = "son_docker_install"  || "$1" = "son_docker_regtest_install" || "$1" = "seed_docker_install" || "$1" = "install" || "$1" = "build" ]]; then
-	if [ -f "$HOME"/.install_setting ]; then
+	if is_installed; then
 		CHECK_MODE=$(grep MODE "$HOME"/.install_setting | awk -F= '{print $2}')
 		msg bold red "Already Peerplays Blockchain is installed in $CHECK_MODE mode. Exiting !!!"
 		exit
@@ -1979,39 +1999,42 @@ fi
 
 case $1 in
 build)
-	msg bold magenta "This will build a Peerplays Blockchain docker image from source code."
+    os_check
+	msg ts bold magenta "This will build a Peerplays Blockchain docker image from source code."
 	build "${@:2}"
 	;;
 witness_install)
-	msg bold magenta "This will build, install and start the Peerplays witness as a service."
+    os_check
+	msg ts bold magenta "This will build, install and start the Peerplays witness as a service."
 	witness_install "${@:2}"
 	;;
 witness_install_only)
-	msg bold magenta "This will build and install Peerplays witness  as a service"
+    os_check
+	msg ts bold magenta "This will build and install Peerplays witness  as a service"
 	witness_install_only "${@:2}"
 	;;
 uninstall)
-	msg bold magenta "This will uninstall Peerplays Blockchain installation."
+	#msg ts bold magenta "This will uninstall Peerplays Blockchain installation."
 	uninstall "${@:2}"
 	;;
 witness_docker_install)
-	msg bold magenta "This will install and start Peerplays witness docker container"
+	msg ts bold magenta "This will install and start Peerplays witness docker container"
 	witness_docker_install "${@:2}"
 	;;
 son_docker_install)
-	msg bold magenta "This will install and start Peerplays SON docker container"
+	msg ts bold magenta "This will install and start Peerplays SON docker container"
 	son_docker_install "${@:2}"
 	;;
 son_docker_regtest_install)
-	msg bold magenta "This will install and start Peerplays SON docker container in test mode"
+	msg ts bold magenta "This will install and start Peerplays SON docker container in test mode"
 	son_docker_regtest_install "${@:2}"
 	;;
 seed_docker_install)
-	msg bold magenta "This will install and start Peerplays seed docker container"
+	msg ts bold magenta "This will install and start Peerplays seed docker container"
 	seed_docker_install "${@:2}"
 	;;
 build_full)
-	msg bold magenta "You may want to use '$0 install_full' for a binary image instead, it's faster."
+	msg ts bold magenta "You may want to use '$0 install_full' for a binary image instead, it's faster."
 	build_full "${@:2}"
 	;;
 build_local)
@@ -2039,7 +2062,7 @@ start_son_regtest)
 	start_son_regtest
 	;;
 replay)
-	msg bold magenta "This will start replay of the installed Peerplays Blockchain"
+	#msg ts bold magenta "This will start replay of the installed Peerplays Blockchain"
 	replay "${@:2}"
 	;;
 memory_replay)
