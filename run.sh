@@ -4,8 +4,6 @@
 # Released under GNU AGPL by Someguy123
 #
 
-
-
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${DOCKER_DIR="$DIR/dkr"}
 : ${FULL_DOCKER_DIR="$DIR/dkr_fullnode"}
@@ -921,6 +919,52 @@ sb_clean() {
     msg bold green " ++ Done."
 }
 
+bos_install() {
+  msg green "Insatall BOS"
+  msg yellow $DIR
+  sudo apt-get -y install libffi-dev libssl-dev python-dev python3-dev python3-pip libsecp256k1-dev build-essential
+
+  pip3 install virtualenv
+
+  sudo apt-get install mongodb
+  sudo systemctl enable mongodb
+  sudo systemctl start mongodb
+
+  sudo apt-get install redis-server
+  sudo systemctl enable redis
+  sudo systemctl start redis
+
+  sudo service mongodb status
+  # sudo service redis status
+
+  cd bos-auto
+  # create virtual environment
+  virtualenv -p python3 env
+  # activate environment
+  source env/bin/activate
+  # install bos-auto into virtual environment
+  pip3 install bos-auto
+  
+  peerplays createwallet
+  # peerplays set node wss://irona.peerplays.download:8090
+  peerplays set node ws://localhost:8090
+  # peerplays set node: wss://hercules.peerplays.download/api
+
+  peerplays addkey
+ 
+  sudo cp bos-auto.service /etc/systemd/system/bos-auto.service
+  sudo cp bos-auto-worker.service /etc/systemd/system/bos-auto-worker.service
+
+  sudo systemctl daemon-reload
+
+  sudo systemctl enable bos-auto.service 
+  sudo systemctl enable bos-auto-worker.service 
+
+  sudo systemctl start bos-auto.service
+  sudo systemctl start bos-auto-worker.service
+
+  msg green "BOS installation completed"
+}
 
 if [ "$#" -lt 1 ]; then
     help
@@ -1021,6 +1065,9 @@ case $1 in
         ;;
     ver|version)
         ver
+        ;;
+    bos_install)
+        bos_install
         ;;
     *)
         msg bold red "Invalid cmd"

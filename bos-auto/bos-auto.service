@@ -1,0 +1,17 @@
+[Unit]
+Description=BOS Auto
+
+[Service]
+WorkingDirectory=/home/ubuntu/bos-auto
+
+Environment=LC_ALL=C.UTF-8
+Environment=LANG=C.UTF-8
+User=ubuntu
+ExecStart=/home/ubuntu/peerplays-docker/bos-auto/env/bin/bos-auto api --host 0.0.0.0 --port 8010
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
