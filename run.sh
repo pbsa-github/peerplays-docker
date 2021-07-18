@@ -174,6 +174,7 @@ help() {
     remote_wallet - open cli_wallet in the container connecting to a remote seed
     enter - enter a bash session in the currently running container
     shell - launch the seed container with appropriate mounts, then open bash for inspection
+    bos_install - install and spinup bos-auto
     "
     echo
     exit
