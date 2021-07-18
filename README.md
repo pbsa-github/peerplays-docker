@@ -211,6 +211,7 @@ Full list of `./run.sh` commands:
  - **build_full** - build the full node version of peerplays into a docker image from source
  - **logs** - display the logs of the container with automatic follow. press ctrl-c to exit
  - **enter** - open a bash prompt inside of the container for debugging
+ - bos_install - install and spinup bos-auto
 
 # LICENSE
 
