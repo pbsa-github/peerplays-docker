@@ -1,7 +1,7 @@
 registryBase='https://registry-1.docker.io'
 authBase='https://auth.docker.io'
 authService='registry.docker.io'
-remote_image="someguy123/steem"
+remote_image="datasecuritynode/peerplays"
 
 get_docker_token() {
     if [[ ! $(command -v jq) ]]; then
