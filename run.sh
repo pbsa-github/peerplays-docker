@@ -938,7 +938,12 @@ bos_install() {
   sudo service mongodb status
   # sudo service redis status
 
-  cd bos-auto
+  # cd ~
+  cp bos-auto/config.yaml ~/bos-auto/config.yaml
+  if [ ! -d "bos-auto" ]; then
+        mkdir ~/bos-auto
+  fi
+  cd ~/bos-auto
   # create virtual environment
   virtualenv -p python3 env
   # activate environment
@@ -947,12 +952,59 @@ bos_install() {
   pip3 install bos-auto
   
   peerplays createwallet
-  # peerplays set node wss://irona.peerplays.download:8090
-  peerplays set node ws://localhost:8090
+  peerplays set node wss://irona.peerplays.download/api
+  # peerplays set node ws://localhost:8090
   # peerplays set node: wss://hercules.peerplays.download/api
 
   peerplays addkey
- 
+
+#  cd ~
+#  if [ ! -d "bos-auto" ]; then
+#        mkdir bos-auto
+#  fi
+#  cd bos-auto
+
+# Writing bos-auto.service, API
+
+  printf "[Unit]\n" > bos-auto.service
+  printf "Description=BOS Auto API\n" >> bos-auto.service
+  printf "\n" >> bos-auto.service
+
+  printf "[Service]\n" >> bos-auto.service
+  printf "WorkingDirectory=%s\n" $PWD >> bos-auto.service
+  printf "\n" >> bos-auto.service
+
+  printf "Environment=LC_ALL=C.UTF-8\n" >> bos-auto.service
+  printf "Environment=LANG=C.UTF-8\n" >> bos-auto.service
+  printf "User=%s\n" $USER >> bos-auto.service
+  printf "ExecStart=%s/env/bin/bos-auto api --host 0.0.0.0 --port 8010\n" $PWD >> bos-auto.service
+  printf "Restart=always\n" >> bos-auto.service
+  printf "\n" >> bos-auto.service
+
+  printf "[Install]\n" >> bos-auto.service
+  printf "WantedBy=multi-user.target\n" >> bos-auto.service
+
+
+# Writing bos-auto-worker.service
+
+  printf "[Unit]\n" > bos-auto-worker.service
+  printf "Description=BOS Auto Worker\n" >> bos-auto-worker.service
+  printf "\n" >> bos-auto-worker.service
+
+  printf "[Service]\n" >> bos-auto-worker.service
+  printf "WorkingDirectory=%s\n" $PWD >> bos-auto-worker.service
+  printf "\n" >> bos-auto-worker.service
+
+  printf "Environment=LC_ALL=C.UTF-8\n" >> bos-auto-worker.service
+  printf "Environment=LANG=C.UTF-8\n" >> bos-auto-worker.service
+  printf "User=%s\n" $USER >> bos-auto-worker.service
+  printf "ExecStart=%s/env/bin/bos-auto worker\n" $PWD >> bos-auto-worker.service
+  printf "Restart=always\n" >> bos-auto-worker.service
+  printf "\n" >> bos-auto-worker.service
+
+  printf "[Install]\n" >> bos-auto-worker.service
+  printf "WantedBy=multi-user.target\n" >> bos-auto-worker.service
+
   sudo cp bos-auto.service /etc/systemd/system/bos-auto.service
   sudo cp bos-auto-worker.service /etc/systemd/system/bos-auto-worker.service
 
