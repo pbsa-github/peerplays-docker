@@ -27,8 +27,10 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
-: ${DK_TAG="datasecuritynode/peerplays:latest"}
-: ${DK_TAG_FULL="datasecuritynode/peerplays:full"}
+: ${REGISTRY_USER="peerplays-user"}
+: ${REGISTRY_TOKEN="AfxXoV4AF_yHShA8wk7W"}
+: ${DK_TAG="registry.gitlab.com/pbsa/tools-libs/peerplays-docker:latest"}
+: ${DK_TAG_FULL="registry.gitlab.com/pbsa/tools-libs/peerplays-docker:latest-full"}
 : ${SHM_DIR="/dev/shm"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
 # Default: 600 seconds (10 minutes)
@@ -460,14 +462,16 @@ install() {
         if grep -qv ':' <<< "$1"; then
             if grep -qv '/' <<< "$1"; then
                 msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
-                DK_TAG="datasecuritynode/peerplays:$1"
-                msg red "We're assuming you've entered a version, and will try to install @datasecuritynode's image: '${DK_TAG}'"
+                DK_TAG="registry.gitlab.com/pbsa/tools-libs/peerplays-docker:$1"
+                msg red "We're assuming you've entered a version, and will try to install gitlab registry image: '${DK_TAG}'"
                 msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TAG='$1' inside of .env and run './run.sh install'"
             fi
         fi
     fi
     msg bold red "NOTE: You are installing image $DK_TAG. Please make sure this is correct."
     sleep 2
+    msg yellow " -> Logging into the gitlab registry"
+    docker login  registry.gitlab.com -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"
     msg yellow " -> Loading image from ${DK_TAG}"
     docker pull "$DK_TAG"
     msg green " -> Tagging as peerplays"
@@ -480,6 +484,9 @@ install() {
 # Default tag is normally datasecuritynode/peerplays:latest-full (official builds by the creator of peerplays-docker).
 #
 install_full() {
+    msg bold red "NOTE: You are installing image $DK_TAG_FULL. Please make sure this is correct."
+    msg yellow " -> Logging into the gitlab registry"
+    docker login  registry.gitlab.com -u "$REGISTRY_USER" -p "$REGISTRY_TOKEN"	
     msg yellow " -> Loading image from ${DK_TAG_FULL}"
     docker pull "$DK_TAG_FULL" 
     msg green " -> Tagging as peerplays"
