@@ -426,7 +426,7 @@ sci() {
 
 # Build full memory node (for RPC nodes) as a docker image
 # Usage: ./run.sh build_full [version]
-# Version is prefixed with v, matching steem releases
+# Version is prefixed with v, matching Peerplays releases
 # e.g. build_full v0.20.6
 build_full() {
 	BUILD_FULL=1
@@ -452,13 +452,13 @@ install_docker() {
 }
 
 # Usage: ./run.sh install [tag]
-# Downloads the Steem low memory node image from someguy123's official builds, or a custom tag if supplied
+# Downloads the Peerplays low memory node image from datasecuritynode official builds, or a custom tag if supplied
 #
 #   tag - optionally specify a docker tag to install from. can be third party
 #         format: user/repo:version    or   user/repo   (uses the 'latest' tag)
 #
 # If no tag specified, it will download the pre-set $DK_TAG in run.sh or .env
-# Default tag is normally someguy123/steem:latest (official builds by the creator of steem-docker).
+# Default tag is normally datasecuritynode/peerplays:latest (official builds by the creator of peerplays-docker).
 #
 install() {
 	clear
@@ -508,8 +508,8 @@ install() {
 }
 
 # Usage: ./run.sh install_full
-# Downloads the Steem full node image from the pre-set $DK_TAG_FULL in run.sh or .env
-# Default tag is normally someguy123/steem:latest-full (official builds by the creator of steem-docker).
+# Downloads the Peerplays full node image from the pre-set $DK_TAG_FULL in run.sh or .env
+# Default tag is normally datasecuritynode/peerplays:latest-full (official builds by the creator of peerplays-docker).
 #
 install_full() {
 	msg yellow " -> Loading image from ${DK_TAG_FULL}"
@@ -545,6 +545,34 @@ bitcoin_exists() {
 	else
 		return -1
 	fi
+}
+
+# Internal Use Only
+# Checks if the bitcoin container exists. Returns 0 if it does, -1 if not.
+# Usage:
+# if bitcoin_regtest_exists; then echo "true"; else "false"; fi
+#
+bitcoin_regtest_exists() {
+    networkcount=$(docker ps -a -f name="^/"$DOCKER_BITCOIN_NAME"$" | wc -l)
+    if [[ $networkcount -eq 2 ]]; then
+        return 0
+    else
+        return -1
+    fi
+}
+
+# Internal Use Only
+# Checks if the son network exists. Returns 0 if it does, -1 if not.
+# Usage:
+# if son_network_exists; then echo "true"; else "false"; fi
+#
+son_network_exists() {
+    networkcount=$(docker network ls | grep son | wc -l)
+    if [[ $networkcount -eq 2 ]]; then
+        return 0
+    else
+        return -1
+    fi
 }
 
 # Internal Use Only
@@ -707,7 +735,7 @@ _docker_run() {
 }
 
 # Usage: ./run.sh start
-# Creates and/or starts the Steem docker container
+# Creates and/or starts the Peerplays docker container
 start() {
 	msg bold green " -> Starting container '${DOCKER_NAME}'..."
 	PEERPLAYS_DOCKER_TAG="$(grep PEERPLAYS_DOCKER_TAG "$HOME"/.install_setting | awk -F= '{print $2}')"
@@ -754,9 +782,53 @@ start() {
 	fi
 }
 
+# Usage: ./run.sh start_son
+# Creates and/or starts the Peerplays SON docker container
+start_son() {
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --network son -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+    fi
+}
+
+
+# Usage: ./run.sh start_son_regtest
+# Creates and/or starts the Peerplays SON docker container with a Bitcoin regtest node in a created docker network.
+start_son_regtest() {
+    msg yellow " -> Verifying network '${DOCKER_NETWORK}'..."
+    son_network_exists
+    if [[ $? == 0 ]]; then
+        msg yellow " -> Network '${DOCKER_NETWORK}' exists"
+    else
+        docker network create ${DOCKER_NETWORK}
+    fi
+
+    msg bold green " -> Starting container $DOCKER_BITCOIN_NAME..."
+    bitcoin_regtest_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_BITCOIN_NAME
+    else
+        docker run -v $DOCKER_BITCOIN_VOLUME:/bitcoin --name=$DOCKER_BITCOIN_NAME -d -p 8333:8333 -p 127.0.0.1:8332:8332 -v ${BTC_REGTEST_CONF}:/bitcoin/.bitcoin/bitcoin.conf --network ${DOCKER_NETWORK} kylemanna/bitcoind
+        sleep 40
+        docker exec $DOCKER_BITCOIN_NAME bitcoin-cli createwallet ${SON_WALLET}
+        docker exec $DOCKER_BITCOIN_NAME bitcoin-cli -rpcwallet=${SON_WALLET} importprivkey ${BTC_REGTEST_KEY}
+    fi
+
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network ${DOCKER_NETWORK} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+    fi
+}
+
 # Usage: ./run.sh replay
-# Replays the blockchain for the Steem docker container
-# If steem is already running, it will ask you if you still want to replay
+# Replays the blockchain for the Peerplays docker container
+# If Peerplays is already running, it will ask you if you still want to replay
 # so that it can stop and remove the old container
 #
 steem_replay() {
@@ -853,8 +925,20 @@ memory_replay() {
 	echo "Started."
 }
 
+# Usage: ./run.sh son_replay
+# Replays the SON chain
+replay_son() {
+    msg bold green " -> Starting container '${DOCKER_NAME}'..."
+    seed_exists
+    if [[ $? == 0 ]]; then
+        docker start $DOCKER_NAME
+    else
+        docker run ${DPORTS[@]} --entrypoint /peerplays/son-entrypoint.sh --network son -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay
+    fi
+}
+
 # Usage: ./run.sh shm_size size
-# Resizes the ramdisk used for storing Steem's shared_memory at /dev/shm
+# Resizes the ramdisk used for storing Peerplays's shared_memory at /dev/shm
 # Size should be specified with G (gigabytes), e.g. ./run.sh shm_size 64G
 #
 shm_size() {
@@ -871,7 +955,7 @@ shm_size() {
 }
 
 # Usage: ./run.sh stop
-# Stops the Steem container, and removes the container to avoid any leftover
+# Stops the Peerplays container, and removes the container to avoid any leftover
 # configuration, e.g. replay command line options
 #
 stop() {
@@ -907,8 +991,8 @@ shell() {
 }
 
 # Usage: ./run.sh wallet
-# Opens cli_wallet inside of the running Steem container and
-# connects to the local steemd over websockets on port 8090
+# Opens cli_wallet inside of the running Peerplays container and
+# connects to the local peerplaysd over websockets on port 8090
 #
 wallet() {
 	docker exec -it $DOCKER_NAME cli_wallet -s ws://127.0.0.1:8090
@@ -934,7 +1018,7 @@ remote_wallet() {
 }
 
 # Usage: ./run.sh logs
-# Shows the last 30 log lines of the running steem container, and follows the log until you press ctrl-c
+# Shows the last 30 log lines of the running Peerplays container, and follows the log until you press ctrl-c
 #
 logs() {
 	if is_installed; then
@@ -965,7 +1049,7 @@ logs() {
 # Usage: ./run.sh pclogs
 # (warning: may require root to work properly in some cases)
 # Used to watch % replayed during blockchain replaying.
-# Scans and follows a large portion of your steem logs then filters to only include the replay percentage
+# Scans and follows a large portion of your Peerplays logs then filters to only include the replay percentage
 #   example:    2018-12-08T23:47:16    22.2312%   6300000 of 28338603   (60052M free)
 #
 pclogs() {

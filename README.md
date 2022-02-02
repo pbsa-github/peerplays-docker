@@ -14,6 +14,7 @@ Features:
  - Automatically forwards port 9777 for seeds
  - Automatically installs a working example configuration for seeds, which can easily be customized for witnesses and full nodes
  - Quick access to common actions such as start, stop, replay, rebuild, local wallet, remote wallet, and much more
+ - BOS-Auto: Install and spinup 
  
  
 # Usage
@@ -181,6 +182,12 @@ Full list of possible configuration options:
  - **DOCKER-NETWORK** - default `son` - the network name to use for communication between the peerplaysd and bitcoind containers
  - **SON_WALLET** - default `son-wallet` - the bitcoin wallet name to create in bitcoind
  - **BTC_REGTEST_KEY** - default `cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m` - the bitcoin private key to import in bitcoind
+
+# bos_install
+ To install and spinup bos:
+ ```
+ ./run.sh bos_install
+ ```
  
 
 # Commands
@@ -204,6 +211,7 @@ Full list of `./run.sh` commands:
  - **build_full** - build the full node version of peerplays into a docker image from source
  - **logs** - display the logs of the container with automatic follow. press ctrl-c to exit
  - **enter** - open a bash prompt inside of the container for debugging
+ - **bos_install** - install and spinup bos-auto
 
 # LICENSE
 
