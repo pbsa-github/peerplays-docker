@@ -385,7 +385,7 @@ dlblocks() {
             echo "Older system, needs additional steps. Proceed"
             curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
             else echo "System not supported"; fi
-            git clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
+            git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
             return
         else
             cd $BC_FOLDER && rm -rf .git*
@@ -401,7 +401,7 @@ dlblocks() {
             echo "Older system, needs additional steps. Proceed"
             curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
             else echo "System not supported"; fi
-            git clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
+            git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
             return
         fi
     cd $BC_FOLDER && rm -rf .git*
@@ -417,7 +417,7 @@ dlblocks() {
     echo "Older system, needs additional steps. Proceed"
     curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
     else echo "System not supported"; fi
-    git clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
+    git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
 if [ $? == 0 ] ; then
     msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks"
     echo "Remember to resize your /dev/shm, and run with replay!"
