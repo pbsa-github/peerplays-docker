@@ -1,18 +1,34 @@
-FROM ubuntu:18.04
+FROM datasecuritynode/peerplays:ubuntu-for-peerplays
+MAINTAINER Peerplays Blockchain Standards Association
 
-# cd ~/dkr && docker build -t peerplays .
-# docker run -p 0.0.0.0:2001:2001 -v $PWD/data:/peerplays -d -t peerplays
+WORKDIR /home/peerplays/peerplays-network
 
+RUN \
+    mkdir src
 
-RUN apt-get update && \
-    apt-get install -y apt-utils && \
-    apt-get install -y gcc g++ cmake make libbz2-dev libdb++-dev libdb-dev && \
-    apt-get install -y libssl-dev openssl libreadline-dev autoconf libtool git gdb liblz4-tool wget jq virtualenv libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev && \
-    apt-get install -y autotools-dev build-essential libbz2-dev libicu-dev python-dev wget doxygen python3 python3-dev python3-pip libboost-all-dev curl && \
-    apt-get install libncurses5-dev libcurl4-openssl-dev &&  \
-    apt-get clean -qy
+# libzmq setup
+RUN \
+    cd src && \
+    wget https://github.com/zeromq/libzmq/archive/refs/tags/v4.3.4.zip && \
+    unzip v4.3.4.zip && \
+    cd libzmq-4.3.4 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j$(nproc) install && \
+    ldconfig
 
-RUN pip3 install jinja2
+# cppzmq setup
+RUN \
+    cd src && \
+    wget https://github.com/zeromq/cppzmq/archive/refs/tags/v4.8.1.zip && \
+    unzip v4.8.1.zip && \
+    cd cppzmq-4.8.1 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j$(nproc) install && \
+    ldconfig
 
 ###
 # Overridable build arguments
