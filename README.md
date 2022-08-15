@@ -14,7 +14,8 @@ Features:
  - Automatically forwards port 9777 for seeds
  - Automatically installs a working example configuration for seeds, which can easily be customized for witnesses and full nodes
  - Quick access to common actions such as start, stop, replay, rebuild, local wallet, remote wallet, and much more
- - BOS-Auto: Install and spinup 
+ - Constantly maintained by a top 20 Steem witness (@someguy123) - updated docker images are often available within 24 hours of version release
+
  
  
 # Usage
@@ -176,19 +177,7 @@ Full list of possible configuration options:
  - **DK_TAG** - default `datasecuritynode/peerplays:latest` - The docker tag to obtain Peerplays from. Useful for installing beta versions, or downgrading to previous versions.
  - **DK_TAG_FULL** - default `datasecuritynode/peerplays:latest-full` - The docker tag to obtain Peerplays (full RPC node)  from. Useful for installing beta versions, or downgrading to previous versions.
  - **SHM_DIR** - default `/dev/shm` - override the location of shared_memory.bin and shared_memory.meta. /dev/shm is a RAM disk on Linux, and can be adjusted with `shm_size`
- - **REMOTE_WS** - default connects to the Peerplays witness node endpoints - the websocket server to use for the `remote_wallet` command
-
- ## SON
- - **DOCKER-NETWORK** - default `son` - the network name to use for communication between the peerplaysd and bitcoind containers
- - **SON_WALLET** - default `son-wallet` - the bitcoin wallet name to create in bitcoind
- - **BTC_REGTEST_KEY** - default `cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m` - the bitcoin private key to import in bitcoind
-
-# bos_install
- To install and spinup bos:
- ```
- ./run.sh bos_install
- ```
- 
+ - **REMOTE_WS** - default `wss://steemd.privex.io` - the websocket server to use for the `remote_wallet` command
 
 # Commands
 
@@ -211,7 +200,10 @@ Full list of `./run.sh` commands:
  - **build_full** - build the full node version of peerplays into a docker image from source
  - **logs** - display the logs of the container with automatic follow. press ctrl-c to exit
  - **enter** - open a bash prompt inside of the container for debugging
- - **bos_install** - install and spinup bos-auto
+
+# Steemit Post
+
+Steemit Post for installing HF19: https://steemit.com/steem/@someguy123/your-guide-to-setting-up-a-witness-server-steem-in-a-box-hf19
 
 # LICENSE
 
