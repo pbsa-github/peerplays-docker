@@ -390,10 +390,6 @@ dlblocks() {
     #    return $?
     #fi
 
-    #if [[ -e "$BC_FOLDER/database/block_num_to_block/blocks" || "$BC_FOLDER/database/block_num_to_block/blocks"  ]]; then
-    #    msg yellow "It looks like you already have an existing block or index files, to redownload use before running this command again: ./run.sh clean"
-    #    exit 
-    #else
 
         cd "$BC_FOLDER" || exit
         . /etc/os-release && OS=$NAME VER=$VERSION_ID
