@@ -16,7 +16,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 : ${BTC_REGTEST_KEY="cSKyTeXidmj93dgbMFqgzD7yvxzA7QAYr5j9qDnY9seyhyv7gH2m"}
 
 # the tag to use when running/replaying peerplaysd
-: ${DOCKER_IMAGE="peerplays"}
+: "${DOCKER_IMAGE="peerplays/peerplays-mainnet:latest"}"
 
 BOLD="$(tput bold)"
 RED="$(tput setaf 1)"
@@ -27,19 +27,19 @@ MAGENTA="$(tput setaf 5)"
 CYAN="$(tput setaf 6)"
 WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
-: ${DK_TAG="datasecuritynode/peerplays:latest"}
-: ${DK_TAG_FULL="datasecuritynode/peerplays:full"}
+: ${DK_TAG="peerplays/peerplays-mainnet:latest"}
+: ${DK_TAG_FULL="peerplays/peerplays:full"}
 : ${SHM_DIR="/dev/shm"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
 # Default: 600 seconds (10 minutes)
-: ${STOP_TIME=600}
+: "${STOP_TIME=600}"
 
 # Git repository to use when building Peerplays - containing peerplaysd code
-: ${PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"}
+: "${PEERPLAYS_SOURCE="https://gitlab.com/pbsa/peerplays.git"}"
 
 # Comma separated list of ports to expose to the internet.
 # By default, only port 9777 will be exposed (the P2P seed port)
-: ${PORTS="9777"}
+: "${PORTS="9777"}"
 
 # Internal variable. Set to 1 by build_full to inform child functions
 BUILD_FULL=0
@@ -91,16 +91,16 @@ if [[ -f .env ]]; then
 fi
 
 # blockchain folder, used by dlblocks
-: ${BC_FOLDER="$DATADIR/witness_node_data_dir/blockchain"}
+: "${BC_FOLDER="$DATADIR/witness_node_data_dir/blockchain"}"
 
-: ${EXAMPLE_MIRA="$DATADIR/witness_node_data_dir/database.cfg.example"}
-: ${MIRA_FILE="$DATADIR/witness_node_data_dir/database.cfg"}
+: "${EXAMPLE_MIRA="$DATADIR/witness_node_data_dir/database.cfg.example"}"
+: "${MIRA_FILE="$DATADIR/witness_node_data_dir/database.cfg"}"
 
-: ${EXAMPLE_CONF="$DATADIR/witness_node_data_dir/config.ini.example"}
-: ${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}
+: "${EXAMPLE_CONF="$DATADIR/witness_node_data_dir/config.ini.example"}"
+: "${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}"
 
 # full path to btc regtest config
-: ${BTC_REGTEST_CONF="/var/opt/peerplays-docker/bitcoin/regtest/bitcoin.conf"}
+: "${BTC_REGTEST_CONF="/var/opt/peerplays-docker/bitcoin/regtest/bitcoin.conf"}"
 
 # if the config file doesn't exist, try copying the example config
 if [[ ! -f "$CONF_FILE" ]]; then
@@ -212,7 +212,7 @@ optimize() {
 parse_build_args() {
     BUILD_VER=$1
     CUST_TAG="peerplays:$BUILD_VER"
-    if (( $BUILD_FULL == 1 )); then
+    if (( "$BUILD_FULL" == 1 )); then
         CUST_TAG+="-full"
     fi
     BUILD_ARGS+=('--build-arg' "peerplaysd=${BUILD_VER}")
@@ -363,68 +363,69 @@ dlblocks() {
     pkg_not_found lz4 liblz4-tool
     pkg_not_found xz xz-utils
     
-    [[ ! -d "$BC_FOLDER" ]] && mkdir -p "$BC_FOLDER"
-    [[ -f "$BC_FOLDER/block_log.index" ]] && msg "Removing old block index" && sudo rm -vf "$BC_FOLDER/block_log.index" 2> /dev/null
+    if [[ ! -d "$BC_FOLDER/database/" ]]; then
+        msg "Blockchain database doesn't exist, creating.."
 
-    if (( $# > 0 )); then
-        custom-dlblocks "$@"
-        return $?
     fi
-    if [[ -f "$BC_FOLDER/block_log" ]]; then
-            msg yellow "It looks like block_log already exists"
-            cd $BC_FOLDER && rm -rf .git*
-            . /etc/os-release && OS=$NAME VER=$VERSION_ID
-            echo Operating System: $OS $VER
-            if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
-            echo "Newer System, already validated. Proceed"
-            sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
-            echo "System already validated. Proceed"
-            sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
-            echo "Older system, needs additional steps. Proceed"
-            curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
-            else echo "System not supported"; fi
-            git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
-            return
+
+    if [[ -e "$BC_FOLDER/database/block_num_to_block/blocks" || -e "$BC_FOLDER/database/block_num_to_block/index" ]]; then
+        read -p "Blockchain database already exists, Do you want to delete and redownload? [y/n]" answer
+        if [ "$answer" == "y" ]; then
+            msg "Removing old blocks and index files"
+            rm -rfv "$BC_FOLDER/database/" 2> /dev/null
+            rm "$BC_FOLDER/db_version" 2> /dev/null
+            rm -rfv "$BC_FOLDER/object_database/" 2> /dev/null
+           
+        elif [ "$answer" == "n" ]; then
+            msg "Nothing was removed, exiting.."
+            exit 
         else
-            cd $BC_FOLDER && rm -rf .git*
-            . /etc/os-release && OS=$NAME VER=$VERSION_ID
-            echo Operating System: $OS $VER
-            if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
-            echo "Newer System, already validated. Proceed"
-            sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
-            echo "System already validated. Proceed"
-            sudo apt-get -y install git git-lfs
-            elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
-            echo "Older system, needs additional steps. Proceed"
-            curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
-            else echo "System not supported"; fi
-            git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
-            return
+            msg "Invalid input, enter 'y' or 'n'"
+            exit 1
         fi
-    cd $BC_FOLDER && rm -rf .git*
-    . /etc/os-release && OS=$NAME VER=$VERSION_ID
-    echo Operating System: $OS $VER
-    if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
-    echo "Newer System, already validated. Proceed"
-    sudo apt-get -y install git git-lfs
-    elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
-    echo "System already validated. Proceed"
-    sudo apt-get -y install git git-lfs
-    elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
-    echo "Older system, needs additional steps. Proceed"
-    curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash && sudo apt-get -y install git git-lfs
-    else echo "System not supported"; fi
-    git lfs clone https://gitlab.com/data-security-node/peerplays-dlblocks.git .; rm -rf .git
-if [ $? == 0 ] ; then
-    msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/blocks"
-    echo "Remember to resize your /dev/shm, and run with replay!"
-    echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
-    echo "$ ./run.sh replay"else 
-    msg "Download error, please run dlblocks again."
-fi
+    fi
+
+    #if (( $# > 0 )); then
+    #    custom-dlblocks "$@"
+    #    return $?
+    #fi
+
+    #if [[ -e "$BC_FOLDER/database/block_num_to_block/blocks" || "$BC_FOLDER/database/block_num_to_block/blocks"  ]]; then
+    #    msg yellow "It looks like you already have an existing block or index files, to redownload use before running this command again: ./run.sh clean"
+    #    exit 
+    #else
+
+        cd "$BC_FOLDER" || exit
+        . /etc/os-release && OS=$NAME VER=$VERSION_ID
+        echo Operating System: "$OS" ":" " $VER"
+
+        if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
+            msg "Newer System, already validated. Proceeding to download and extract"
+            rm mainnet-blocks-index.tar.gz*
+            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
+            tar -xvf mainnet-blocks-index.tar.gz
+            rm mainnet-blocks-index.tar.gz
+
+        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
+            echo "System is reaching end of life, please consider updating - Proceeding to download and extract"
+            rm mainnet-blocks-index.tar.gz*
+            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
+            tar -xvf mainnet-blocks-index.tar.gz 
+            rm mainnet-blocks-index.tar.gz
+
+        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
+            echo "Systems out of LTS are not supported, please consider updating your system.."
+            exit
+        fi
+
+    if [ $? == 0 ] ; then
+        msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/"
+        echo "Remember to resize your /dev/shm, and run with replay!"
+        echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
+        echo "$ ./run.sh replay"
+    else 
+        msg "Download error, please run dlblocks again."
+    fi
 
 }
 
@@ -438,30 +439,30 @@ install_docker() {
     curl https://get.docker.com | sh
     if [ "$EUID" -ne 0 ]; then 
         echo "Adding user $(whoami) to docker group"
-        sudo usermod -aG docker $(whoami)
+        sudo usermod -aG docker "$(whoami)"
         echo "IMPORTANT: Please re-login (or close and re-connect SSH) for docker to function correctly"
     fi
 }
 
 # Usage: ./run.sh install [tag]
-# Downloads the Peerplays low memory node image from datasecuritynode official builds, or a custom tag if supplied
+# Downloads the Peerplays low memory node image from Peerplays official builds, or a custom tag if supplied
 #
 #   tag - optionally specify a docker tag to install from. can be third party
 #         format: user/repo:version    or   user/repo   (uses the 'latest' tag)
 #
 # If no tag specified, it will download the pre-set $DK_TAG in run.sh or .env
-# Default tag is normally datasecuritynode/peerplays:latest (official builds by the creator of peerplays-docker).
+# Default tag is normally peerplays/peerplays:latest (official builds by the creator of peerplays-docker).
 #
 install() {
     if (( $# == 1 )); then
         DK_TAG=$1
         # If neither '/' nor ':' are present in the tag, then for convenience, assume that the user wants
-        # datasecuritynode/peerplays with this specific tag.
+        # peerplays/peerplays with this specific tag.
         if grep -qv ':' <<< "$1"; then
             if grep -qv '/' <<< "$1"; then
                 msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
-                DK_TAG="datasecuritynode/peerplays:$1"
-                msg red "We're assuming you've entered a version, and will try to install @datasecuritynode's image: '${DK_TAG}'"
+                DK_TAG="peerplays/peerplays-mainnet$1"
+                msg red "We're assuming you've entered a version, and will try to install Peerplays's image: '${DK_TAG}'"
                 msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TAG='$1' inside of .env and run './run.sh install'"
             fi
         fi
@@ -477,8 +478,8 @@ install() {
 
 # Usage: ./run.sh install_full
 # Downloads the Peerplays full node image from the pre-set $DK_TAG_FULL in run.sh or .env
-# Default tag is normally datasecuritynode/peerplays:latest-full (official builds by the creator of peerplays-docker).
-#
+# Default tag is normally peerplays/peerplays:latest-full (official builds by the creator of peerplays-docker).
+
 install_full() {
     msg yellow " -> Loading image from ${DK_TAG_FULL}"
     docker pull "$DK_TAG_FULL" 
@@ -607,7 +608,7 @@ start_son_regtest() {
 replay() {
     seed_running
     if [[ $? == 0 ]]; then
-        echo $RED"WARNING: Your Peerplays server ($DOCKER_NAME) is currently running"$RESET
+        echo "$RED""WARNING: Your Peerplays server ($DOCKER_NAME) is currently running""$RESET"
         echo
         docker ps
         echo
@@ -615,14 +616,14 @@ replay() {
         if [[ "$shouldstop" == "y" ]]; then
             stop
         else
-            echo $GREEN"Did not say 'y'. Quitting."$RESET
+            echo "$GREEN""Did not say 'y'. Quitting.""$RESET"
             return
         fi
     fi 
     msg yellow " -> Removing old container '${DOCKER_NAME}'"
-    docker rm $DOCKER_NAME 2> /dev/null
+    docker rm "$DOCKER_NAME" 2> /dev/null
     msg green " -> Running peerplays (image: ${DOCKER_IMAGE}) with replay in container '${DOCKER_NAME}'..."
-    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir --replay
+    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" ./witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir --replay
     msg bold green " -> Started."
 }
 
@@ -686,9 +687,9 @@ shm_size() {
 stop() {
     msg "If you don't care about a clean stop, you can force stop the container with ${BOLD}./run.sh kill"
     msg red "Stopping container '${DOCKER_NAME}' (allowing up to ${STOP_TIME} seconds before killing)..."
-    docker stop -t ${STOP_TIME} $DOCKER_NAME
+    docker stop -t "${STOP_TIME}" "$DOCKER_NAME"
     msg red "Removing old container '${DOCKER_NAME}'..."
-    docker rm $DOCKER_NAME
+    docker rm "$DOCKER_NAME"
 }
 
 sbkill() {
