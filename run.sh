@@ -29,6 +29,7 @@ WHITE="$(tput setaf 7)"
 RESET="$(tput sgr0)"
 : ${DK_TAG="peerplays/peerplays-mainnet:latest"}
 : ${DK_TAG_FULL="peerplays/peerplays:full"}
+: ${DK_TEST="peerplays/peerplays-testnet:latest"}
 : ${SHM_DIR="/dev/shm"}
 # Amount of time in seconds to allow the docker container to stop before killing it.
 # Default: 600 seconds (10 minutes)
@@ -166,6 +167,7 @@ help() {
     restart - restarts seed container
     install_docker - install docker
     install - pulls latest docker image from server (no compiling)
+    install_testnet - pulls latest testnet docker image from server (no compiling)
     install_full - pulls latest (FULL NODE FOR RPC) docker image from server (no compiling)
     rebuild - builds seed container (from docker file), and then restarts it
     build - only builds seed container (from docker file)
@@ -440,14 +442,17 @@ install_docker() {
     fi
 }
 
-# Usage: ./run.sh install [tag]
+# Usage: ./run.sh install [tag] [env flag]
 # Downloads the Peerplays low memory node image from Peerplays official builds, or a custom tag if supplied
 #
 #   tag - optionally specify a docker tag to install from. can be third party
 #         format: user/repo:version    or   user/repo   (uses the 'latest' tag)
 #
+#   env flag - optinally
+#
+#
 # If no tag specified, it will download the pre-set $DK_TAG in run.sh or .env
-# Default tag is normally peerplays/peerplays:latest (official builds by the creator of peerplays-docker).
+# Default tag is normally peerplays/peerplays-mainnet:latest (official builds by the creator of peerplays-docker).
 #
 install() {
     if (( $# == 1 )); then
@@ -457,9 +462,9 @@ install() {
         if grep -qv ':' <<< "$1"; then
             if grep -qv '/' <<< "$1"; then
                 msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
-                DK_TAG="peerplays/peerplays-mainnet$1"
+                DK_TAG="peerplays/peerplays-mainnet:$1"
                 msg red "We're assuming you've entered a version, and will try to install Peerplays's image: '${DK_TAG}'"
-                msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TAG='$1' inside of .env and run './run.sh install'"
+                msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_MAIN='$1' inside of .env and run './run.sh install'"
             fi
         fi
     fi
@@ -469,6 +474,38 @@ install() {
     docker pull "$DK_TAG"
     msg green " -> Tagging as peerplays"
     docker tag "$DK_TAG" peerplays
+    msg bold green " -> Installation completed. You may now configure or run the server"
+}
+
+# Usage: ./run.sh install_testnet [tag]
+# Downloads the Peerplays low memory node image from Peerplays official builds, or a custom tag if supplied
+#
+#   tag - optionally specify a docker tag to install from. can be third party
+#         format: user/repo:version    or   user/repo   (uses the 'latest' tag)
+#
+# If no tag specified, it will download the pre-set $DK_TEST in run.sh or .env
+# Default tag is normally peerplays/peerplays-testnet:latest (official builds by the creator of peerplays-docker).
+#
+install_testnet() {
+    if (( $# == 1 )); then
+        DK_TEST=$1
+        # If neither '/' nor ':' are present in the tag, then for convenience, assume that the user wants
+        # peerplays/peerplays with this specific tag.
+        if grep -qv ':' <<< "$1"; then
+            if grep -qv '/' <<< "$1"; then
+                msg bold red "WARNING: Neither / nor : were present in your tag '$1'"
+                DK_TEST="peerplays/peerplays-testnet:$1"
+                msg red "We're assuming you've entered a version, and will try to install Peerplays's image: '${DK_TEST}'"
+                msg yellow "If you *really* specifically want '$1' from Docker hub, set DK_TEST='$1' inside of .env and run './run.sh install'"
+            fi
+        fi
+    fi
+    msg bold red "NOTE: You are installing image $DK_TEST. Please make sure this is correct."
+    sleep 2
+    msg yellow " -> Loading image from ${DK_TEST}"
+    docker pull "$DK_TEST"
+    msg green " -> Tagging as peerplays"
+    docker tag "$DK_TEST" peerplays
     msg bold green " -> Installation completed. You may now configure or run the server"
 }
 
@@ -985,6 +1022,9 @@ case $1 in
         ;;
     install)
         install "${@:2}"
+        ;;
+    install_testnet)
+        install_testnet "${@:2}"
         ;;
     install_full)
         install_full
