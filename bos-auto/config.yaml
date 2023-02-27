@@ -8,10 +8,8 @@
 ######################
 # Ideally, the witness endpoint runs on localhost somewhere
 node: ws://localhost:8090
-# node: wss://ppyapi.spacemx.tech
-# node: ws://ec2-99-79-98-229.ca-central-1.compute.amazonaws.com:8090
-# node: ws://95.216.90.243:8090
-# node: wss://hercules.peerplays.download/api
+# How to use an external witness endpoint
+#node: wss://hercules.peerplays.download/api
 
 
 ######################
@@ -39,16 +37,21 @@ connection:
         nobroadcast: False
         num_entries: 1
 
+    #testnet-public:
+    #    node:
+    #        - wss://x.x.x/api
+    #    nobroadcast: False
+    #    num_entries: 1
 
-    elizabeth:
+    devnet:
         node:
-            - ws://ec2-99-79-98-229.ca-central-1.compute.amazonaws.com:8090
+            - wss://devnet.peerplays.download/api
         nobroadcast: False
         num_entries: 1
 
-    hercules:
+    alphanet:
         node:
-            - wss://hercules.peerplays.download/api
+            - wss://alphanet.peerplays.download/api
         nobroadcast: False
         num_entries: 1
 
