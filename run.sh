@@ -363,26 +363,40 @@ dlblocks() {
     pkg_not_found lz4 liblz4-tool
     pkg_not_found xz xz-utils
     
-    if [[ ! -d "$BC_FOLDER/database/" ]]; then
-        msg "Blockchain database doesn't exist, creating.."
+    if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" || -f "$BC_FOLDER/mainnet-blocks-index.tar.gz" ]]; then
+        echo "Blockchain database or an archive of it already exists:" 
+        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress)? [y/n/r]: "  answer
 
-    fi
-
-    if [[ -e "$BC_FOLDER/database/block_num_to_block/blocks" || -e "$BC_FOLDER/database/block_num_to_block/index" ]]; then
-        read -p "Blockchain database already exists, Do you want to delete and redownload? [y/n]" answer
         if [ "$answer" == "y" ]; then
+            cd "$BC_FOLDER" || return
             msg "Removing old blocks and index files"
-            rm -rfv "$BC_FOLDER/database/" 2> /dev/null
-            rm "$BC_FOLDER/db_version" 2> /dev/null
-            rm -rfv "$BC_FOLDER/object_database/" 2> /dev/null
-           
+            rm -rfv "$BC_FOLDER/blockchain/database/" 2> /dev/null
+            rm "$BC_FOLDER/blockchain/db_version" 2> /dev/null
+            rm -rfv "$BC_FOLDER/blockchain/object_database/" 2> /dev/null
+            msg yellow "Downloading and decompressing on the fly"
+            curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+            
         elif [ "$answer" == "n" ]; then
             msg "Nothing was removed, exiting.."
             exit 
+
+        elif [ "$answer" == "r" ]; then
+            cd "$BC_FOLDER" || return
+            msg yellow "This option doesn't decompress on the fly, ensure you have more than 20GB of free space - Waiting 10 seconds.."
+            #sleep 10
+            wget -c https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
+            yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BC_FOLDER"
+            
         else
-            msg "Invalid input, enter 'y' or 'n'"
+            msg "Invalid input, enter 'y' or 'n' or 'r'"
             exit 1
         fi
+    else
+        msg yellow "Blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 20GB of free space.."
+        cd "$BC_FOLDER" || exit
+        curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+        yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BC_FOLDER"
+    
     fi
 
     #if (( $# > 0 )); then
@@ -390,29 +404,6 @@ dlblocks() {
     #    return $?
     #fi
 
-
-        cd "$BC_FOLDER" || exit
-        . /etc/os-release && OS=$NAME VER=$VERSION_ID
-        echo Operating System: "$OS" ":" " $VER"
-
-        if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
-            msg "Newer System, already validated. Proceeding to download and extract"
-            rm mainnet-blocks-index.tar.gz*
-            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            tar -xvf mainnet-blocks-index.tar.gz
-            rm mainnet-blocks-index.tar.gz
-
-        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
-            echo "System is reaching end of life, please consider updating - Proceeding to download and extract"
-            rm mainnet-blocks-index.tar.gz*
-            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            tar -xvf mainnet-blocks-index.tar.gz 
-            rm mainnet-blocks-index.tar.gz
-
-        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
-            echo "Systems out of LTS are not supported, please consider updating your system.."
-            exit
-        fi
 
     if [ $? == 0 ] ; then
         msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/"
