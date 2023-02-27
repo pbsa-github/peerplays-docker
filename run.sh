@@ -416,6 +416,65 @@ dlblocks() {
 
 }
 
+dlbitcoin() {
+    pkg_not_found rsync rsync
+    pkg_not_found lz4 liblz4-tool
+    pkg_not_found xz xz-utils
+    
+    if [[ ! -d "$BTC_FOLDER" ]]; then
+        msg "Libbitcoin Blockchain database doesn't exist, creating.."
+        mkdir "$BTC_FOLDER"
+    fi
+
+    if [[ -f "$BTC_FOLDER/blockchain/transaction_table" || -e "$BTC_FOLDER/blockchain/history_rows" || -e "$BTC_FOLDER/blockchain/spend_table" || -f "$BTC_FOLDER/mainnet-libbitcoin.tar.gz" ]]; then
+        echo "Bitcoin blockchain database or an archive of it already exists:" 
+        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress)? [y/n/r]: "  answer
+
+        if [ "$answer" == "y" ]; then
+            cd "$BTC_FOLDER" || return
+            msg "Removing old blocks and index files"
+            rm -rfv "$BTC_FOLDER/blockchain/" 2> /dev/null
+            msg red "Ensure you have atleast 1TB of free disk space!"
+            sleep 5
+            msg yellow "Downloading and decompressing on the fly"
+            curl https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz | tar xzvf -
+            
+        elif [ "$answer" == "n" ]; then
+            msg "Nothing was removed, exiting.."
+            exit 
+
+        elif [ "$answer" == "r" ]; then
+            cd "$BTC_FOLDER" || return
+            msg red "This option doesn't decompress on the fly, ensure you have more than 2TB of free space - Waiting 5 seconds.."
+            sleep 5
+            wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-blocks-index.tar.gz
+            yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BTC_FOLDER"
+            
+        else
+            msg "Invalid input, enter 'y' or 'n' or 'r'"
+            exit 1
+        fi
+    else
+        msg red "Bitcoin blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 1TB of free space.."
+        cd "$BTC_FOLDER" || exit
+        curl https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+        yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BTC_FOLDER"
+    fi
+
+    #if (( $# > 0 )); then
+    #    custom-dlblocks "$@"
+    #    return $?
+    #fi
+
+    if [ $? == 0 ] ; then
+        msg "FINISHED. Blockchain installed to "${BTC_FOLDER}"/blockchain/"
+        echo "Remember to resize your /dev/shm, and run with replay!"
+    else 
+        msg "Download error, please run dlblocks again."
+    fi
+
+}
+
 # Usage: ./run.sh install_docker
 # Downloads and installs the latest version of Docker using the Get Docker site
 # If Docker is already installed, it should update it.
