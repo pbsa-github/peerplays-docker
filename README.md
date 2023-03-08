@@ -174,8 +174,9 @@ Full list of possible configuration options:
  - **DOCKER_NAME** - default `seed` - the container name to use for your peerplaysd server
  - **DOCKER_DIR** - default `$DIR/dkr` - The directory to build the low memory node docker image from
  - **FULL_DOCKER_DIR** - default `$DIR/dkr_fullnode` - The directory to build the full-node RPC node docker image from
- - **DK_TAG** - default `datasecuritynode/peerplays:latest` - The docker tag to obtain Peerplays from. Useful for installing beta versions, or downgrading to previous versions.
- - **DK_TAG_FULL** - default `datasecuritynode/peerplays:latest-full` - The docker tag to obtain Peerplays (full RPC node)  from. Useful for installing beta versions, or downgrading to previous versions.
+ - **DK_TAG** - default `peerplays/peerplays-mainnet:latest` - The docker tag to obtain Peerplays from. Useful for installing beta versions, or downgrading to previous versions.
+ - **DK_TEST** - default `peerplays/peerplays-testnet:latest` - The docker tag to obtain Peerplays from. Useful for installing beta versions, or downgrading to previous versions.
+ - **DK_TAG_FULL** - default `peerplays/peerplays-mainnet:latest-full` - The docker tag to obtain Peerplays (full RPC node)  from. Useful for installing beta versions, or downgrading to previous versions.
  - **SHM_DIR** - default `/dev/shm` - override the location of shared_memory.bin and shared_memory.meta. /dev/shm is a RAM disk on Linux, and can be adjusted with `shm_size`
  - **REMOTE_WS** - default `wss://steemd.privex.io` - the websocket server to use for the `remote_wallet` command
 
