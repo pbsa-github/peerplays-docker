@@ -92,13 +92,17 @@ if [[ -f .env ]]; then
 fi
 
 # blockchain folder, used by dlblocks
-: "${BC_FOLDER="$DATADIR/witness_node_data_dir/blockchain"}"
+: "${BC_FOLDER="$DATADIR/witness_node_data_dir"}"
 
 : "${EXAMPLE_MIRA="$DATADIR/witness_node_data_dir/database.cfg.example"}"
 : "${MIRA_FILE="$DATADIR/witness_node_data_dir/database.cfg"}"
 
 : "${EXAMPLE_CONF="$DATADIR/witness_node_data_dir/config.ini.example"}"
 : "${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}"
+
+# bitcoin blockchain folder, used by dlbitcoin
+: "${BTC_FOLDER="$DATADIR/libbitcoin"}"
+
 
 # full path to btc regtest config
 : "${BTC_REGTEST_CONF="/var/opt/peerplays-docker/bitcoin/regtest/bitcoin.conf"}"
@@ -157,7 +161,8 @@ help() {
     start_son - starts son seed container
     start_son_regtest - starts son seed container and bitcoind container under the docker network
     clean - Remove blockchain, p2p, and/or shared mem folder contents, seed, bitcoind, and son docker network (warns beforehand)
-    dlblocks - download and decompress the blockchain to speed up your first start
+    dlblocks - download and decompress Peerplays blockchain to speed up your first start
+    dlbitcoin - download and decompress the bitcoin blockchain to speed up SONs inital sync
     replay - starts seed container (in replay mode)
     replay_son - starts son seed container (in replay mode)
     memory_replay - starts seed container (in replay mode, with --memory-replay)
