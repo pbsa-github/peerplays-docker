@@ -9,7 +9,7 @@
 # Ideally, the witness endpoint runs on localhost somewhere
 node: ws://localhost:8090
 # How to use an external witness endpoint
-#node: wss://hercules.peerplays.download/api
+#node: wss://testnet.peerplays.download/api/
 
 
 ######################
@@ -31,7 +31,6 @@ connection:
     alice:
         node:
               # - wss://pma.blockveritas.co/ws
-              # - wss://api.eifos.org
             - ws://localhost:8090
               # - wss://ppyapi.spacemx.tech
         nobroadcast: False
@@ -39,22 +38,9 @@ connection:
 
     #testnet-public:
     #    node:
-    #        - wss://x.x.x/api
+    #        - wss://testnet.peerplays.download/api/
     #    nobroadcast: False
     #    num_entries: 1
-
-    devnet:
-        node:
-            - wss://devnet.peerplays.download/api
-        nobroadcast: False
-        num_entries: 1
-
-    alphanet:
-        node:
-            - wss://alphanet.peerplays.download/api
-        nobroadcast: False
-        num_entries: 1
-
 
 
 ######################
