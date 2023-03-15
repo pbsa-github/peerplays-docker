@@ -372,7 +372,7 @@ dlblocks() {
     
     if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" || -f "$BC_FOLDER/mainnet-blocks-index.tar.gz" ]]; then
         echo "Blockchain database or an archive of it already exists:" 
-        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress)? [y/n/r]: "  answer
+        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress on the fly)? [y/n/r]: "  answer
 
         if [ "$answer" == "y" ]; then
             cd "$BC_FOLDER" || return
@@ -392,7 +392,8 @@ dlblocks() {
             msg yellow "This option doesn't decompress on the fly, ensure you have more than 20GB of free space - Waiting 10 seconds.."
             #sleep 10
             wget -c https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BC_FOLDER"
+            msg yellow "Extracting, this might take a minute.."
+            tar xzvf mainnet-blocks-index.tar.gz
             
         else
             msg "Invalid input, enter 'y' or 'n' or 'r'"
@@ -429,21 +430,32 @@ dlbitcoin() {
     pkg_not_found xz xz-utils
     
     if [[ ! -d "$BTC_FOLDER" ]]; then
-        msg "Libbitcoin Blockchain database doesn't exist, creating.."
+        msg "Libbitcoin Blockchain database doesn't exist, creating and starting download - Ensure you have atleast 1TB free disk space.."
+        df -h .
+        sleep 10
+
+        
+
         mkdir "$BTC_FOLDER"
     fi
 
-    if [[ -f "$BTC_FOLDER/blockchain/transaction_table" || -e "$BTC_FOLDER/blockchain/history_rows" || -e "$BTC_FOLDER/blockchain/spend_table" || -f "$BTC_FOLDER/mainnet-libbitcoin.tar.gz" ]]; then
+    if [[ -f "$BTC_FOLDER/mainnet-libbitcoin.tar.gz" || -f "$BTC_FOLDER/blockchain/transaction_table" || -f "$BTC_FOLDER/blockchain/history_rows" || -f "$BTC_FOLDER/blockchain/block_index" ]]; then
         echo "Bitcoin blockchain database or an archive of it already exists:" 
-        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress)? [y/n/r]: "  answer
+        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress on the fly)? [y/n/r]: "  answer
 
         if [ "$answer" == "y" ]; then
             cd "$BTC_FOLDER" || return
+            msg red "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            msg red "!! THIS OPTION IS NOT SAFE IF YOU HAVE AN UNSTABLE INTERNET CONNECTION !!!!!!!!!!!!!!!!"
+            msg red "!! IF DOWNLOAD IS RESTARTED, PROGRESS WILL BE DESTROYED - USE OPTION "r" TO BE SAFE !!!!!"
+            msg red "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            msg red "Ensure you have atleast 970GB+ of free disk space!"
+            msg yellow "Download will begin in 40 seconds, please use option "r" to be safe"
+            df -h .
+            sleep 40
+            msg red "Downloading and decompressing on the fly"
             msg "Removing old blocks and index files"
             rm -rfv "$BTC_FOLDER/blockchain/" 2> /dev/null
-            msg red "Ensure you have atleast 1TB of free disk space!"
-            sleep 5
-            msg yellow "Downloading and decompressing on the fly"
             curl https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz | tar xzvf -
             
         elif [ "$answer" == "n" ]; then
@@ -452,20 +464,24 @@ dlbitcoin() {
 
         elif [ "$answer" == "r" ]; then
             cd "$BTC_FOLDER" || return
-            msg red "This option doesn't decompress on the fly, ensure you have more than 2TB of free space - Waiting 5 seconds.."
-            sleep 5
-            wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-blocks-index.tar.gz
-            yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BTC_FOLDER"
+            msg red "This option doesn't decompress on the fly, ensure you have more than 1.625TB (970+GB TOTAL used after removing tarball..) - Waiting 10 seconds.."
+            df -h .
+            sleep 10
+            wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz 
+            msg yellow "Extracting, this will take some time.."
+            tar xzvf mainnet-libbitcoin.tar.gz
             
         else
             msg "Invalid input, enter 'y' or 'n' or 'r'"
             exit 1
         fi
     else
-        msg red "Bitcoin blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 1TB of free space.."
+        msg red "Bitcoin blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 970+GB of free space.."
+        df -h . 
+        sleep 10
         cd "$BTC_FOLDER" || exit
-        curl https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
-        yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BTC_FOLDER"
+        wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz
+        tar xzvf mainnet-libbitcoin.tar.gz
     fi
 
     #if (( $# > 0 )); then
@@ -474,8 +490,7 @@ dlbitcoin() {
     #fi
 
     if [ $? == 0 ] ; then
-        msg "FINISHED. Blockchain installed to "${BTC_FOLDER}"/blockchain/"
-        echo "Remember to resize your /dev/shm, and run with replay!"
+        msg "FINISHED. Libbitcoin Blockchain installed to ""${BTC_FOLDER}""/blockchain/"
     else 
         msg "Download error, please run dlblocks again."
     fi
@@ -1140,6 +1155,9 @@ case $1 in
         ;;
     dlblocks)
         dlblocks "${@:2}"
+        ;;
+    dlbitcoin)
+        dlbitcoin "${@:2}"
         ;;
     enter)
         enter
