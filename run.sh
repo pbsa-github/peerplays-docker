@@ -653,9 +653,9 @@ start() {
     msg bold green " -> Starting container '${DOCKER_NAME}'..."
     seed_exists
     if [[ $? == 0 ]]; then
-        docker start $DOCKER_NAME
+        docker start "$DOCKER_NAME"
     else
-        docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+        docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays-network -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir
     fi
 }
 
@@ -726,7 +726,7 @@ replay() {
     msg yellow " -> Removing old container '${DOCKER_NAME}'"
     docker rm "$DOCKER_NAME" 2> /dev/null
     msg green " -> Running peerplays (image: ${DOCKER_IMAGE}) with replay in container '${DOCKER_NAME}'..."
-    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" ./witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir --replay
+    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays-network -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir --replay
     msg bold green " -> Started."
 }
 
