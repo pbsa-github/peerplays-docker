@@ -138,8 +138,7 @@ RUN \
     ln -s /home/peerplays/peerplays/build/programs/witness_node/witness_node ./
 
 
-VOLUME /peerplays
-WORKDIR /peerplays
+VOLUME /peerplays-network
 
 # P2P (seed) port
 EXPOSE 2001
