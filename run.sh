@@ -414,7 +414,7 @@ dlblocks() {
 
 
     if [ $? == 0 ] ; then
-        msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/"
+        msg "FINISHED. Blockchain installed to ${BC_FOLDER}"
         echo "Remember to resize your /dev/shm, and run with replay!"
         echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
         echo "$ ./run.sh replay"
@@ -490,7 +490,7 @@ dlbitcoin() {
     #fi
 
     if [ $? == 0 ] ; then
-        msg "FINISHED. Libbitcoin Blockchain installed to ""${BTC_FOLDER}""/blockchain/"
+        msg "FINISHED. Libbitcoin Blockchain installed to ${BTC_FOLDER}"
     else 
         msg "Download error, please run dlblocks again."
     fi
