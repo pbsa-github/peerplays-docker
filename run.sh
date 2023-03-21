@@ -366,9 +366,8 @@ build_full() {
 # Instead, you can continue your download using the uncompressed version over HTTP:
 #
 dlblocks() {
-    pkg_not_found rsync rsync
-    pkg_not_found lz4 liblz4-tool
-    pkg_not_found xz xz-utils
+    pkg_not_found wget wget
+
     
     if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" || -f "$BC_FOLDER/mainnet-blocks-index.tar.gz" ]]; then
         echo "Blockchain database or an archive of it already exists:" 
@@ -425,9 +424,7 @@ dlblocks() {
 }
 
 dlbitcoin() {
-    pkg_not_found rsync rsync
-    pkg_not_found lz4 liblz4-tool
-    pkg_not_found xz xz-utils
+    pkg_not_found wget wget
     
     if [[ ! -d "$BTC_FOLDER" ]]; then
         msg "Libbitcoin Blockchain database doesn't exist, creating and starting download - Ensure you have atleast 1TB free disk space.."
