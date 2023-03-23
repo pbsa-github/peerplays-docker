@@ -367,37 +367,52 @@ build_full() {
 #
 dlblocks() {
     pkg_not_found wget wget
-
+    msg red "It is advised to run "./run.sh clean" prior to running dlblocks"
+    msg yellow "If you're unsure which option to select, choose option r for safest option"
     
     if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" || -f "$BC_FOLDER/mainnet-blocks-index.tar.gz" ]]; then
         echo "Blockchain database or an archive of it already exists:" 
-        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress on the fly)? [y/n/r]: "  answer
+        while true; do
+            read -p "Do you want to download/decompress on the fly, or start/resume a new download (Resuming also starts a fresh download, but keeps the database archive)? [y/n/r]: "  answer
+            if [ "$answer" == "y" ]; then
+                if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" ]]; then
+                    msg yellow "Please run './run.sh clean' before trying again"
+                    exit 1
+                fi
+                cd "$BC_FOLDER" || return
+                msg yellow "Downloading and decompressing on the fly"
+                msg yellow "Ensure you have at least 10GB of free space available!"
+                df -h
+                sleep 10
+                curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+                break
+                
+            elif [ "$answer" == "n" ]; then
+                msg "Nothing was removed, exiting.."
+                exit 
 
-        if [ "$answer" == "y" ]; then
-            cd "$BC_FOLDER" || return
-            msg "Removing old blocks and index files"
-            rm -rfv "$BC_FOLDER/blockchain/database/" 2> /dev/null
-            rm "$BC_FOLDER/blockchain/db_version" 2> /dev/null
-            rm -rfv "$BC_FOLDER/blockchain/object_database/" 2> /dev/null
-            msg yellow "Downloading and decompressing on the fly"
-            curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
-            
-        elif [ "$answer" == "n" ]; then
-            msg "Nothing was removed, exiting.."
-            exit 
-
-        elif [ "$answer" == "r" ]; then
-            cd "$BC_FOLDER" || return
-            msg yellow "This option doesn't decompress on the fly, ensure you have more than 20GB of free space - Waiting 10 seconds.."
-            #sleep 10
-            wget -c https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            msg yellow "Extracting, this might take a minute.."
-            tar xzvf mainnet-blocks-index.tar.gz
-            
-        else
-            msg "Invalid input, enter 'y' or 'n' or 'r'"
-            exit 1
-        fi
+            elif [ "$answer" == "r" ]; then
+                cd "$BC_FOLDER" || return
+                msg yellow "This option doesn't decompress on the fly, ensure you have more than 20GB of free space - Waiting 10 seconds.."
+                df -h "$(pwd)"
+                sleep 10
+                wget -c https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
+          
+                if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" ]]; then
+                    msg yellow "Existing blockchain database found. No extraction needed." 
+                    msg yellow "Rerun the script with option y if you want a fresh download"
+                    msg yellow "Use ./run.sh clean then rerun dlblocks"
+                    sleep 5
+                else
+                    msg yellow "Extracting, this might take a minute.."
+                    tar xzvf mainnet-blocks-index.tar.gz
+                fi
+                break
+                
+            else
+                msg "Invalid input, enter 'y' or 'n' or 'r'"
+            fi
+        done
     else
         msg yellow "Blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 20GB of free space.."
         cd "$BC_FOLDER" || exit
@@ -405,12 +420,6 @@ dlblocks() {
         yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BC_FOLDER"
     
     fi
-
-    #if (( $# > 0 )); then
-    #    custom-dlblocks "$@"
-    #    return $?
-    #fi
-
 
     if [ $? == 0 ] ; then
         msg "FINISHED. Blockchain installed to ${BC_FOLDER}"
@@ -942,35 +951,37 @@ sb_clean() {
         case $1 in
             sh*)
                 msg bold red " !!! Clearing all files in SHM_DIR ( $SHM_DIR )"
-                rm -rfv "$SHM_DIR"/*
+                rm -rfv "${SHM_DIR:?}"/*
                 mkdir -p "$SHM_DIR" &> /dev/null
                 msg bold green " +++ Cleared shared files directory."
                 ;;
             bloc*)
                 msg bold red " !!! Clearing all files in $bc_dir and $p2p_dir"
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
+                rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
                 mkdir -p "$bc_dir" "$p2p_dir" &> /dev/null
                 msg bold green " +++ Cleared blockchain files + p2p"
                 ;;
             all)
                 msg bold red " !!! Clearing blockchain, p2p, and shared memory files..."
-                rm -rfv "$SHM_DIR"/*
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                rm -rfv "${SHM_DIR:?}"/*
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
+                rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
                 mkdir -p "$bc_dir" "$p2p_dir" "$SHM_DIR" &> /dev/null
                 msg bold green " +++ Cleared blockchain + p2p + shared memory"
                 ;;
             son)
                 msg bold red "!!! Clearing all files in $bc_dir and $p2p_dir and removing $DOCKER_NAME, $DOCKER_BITCOIN_NAME containers and $DOCKER_NETWORK docker network and $DOCKER_BITCOIN_VOLUME volume"
-                docker stop $DOCKER_NAME
-                docker rm $DOCKER_NAME
-                docker stop $DOCKER_BITCOIN_NAME
-                docker rm $DOCKER_BITCOIN_NAME
-                docker network rm $DOCKER_NETWORK
-                docker volume rm $DOCKER_BITCOIN_VOLUME
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                docker stop "$DOCKER_NAME"
+                docker rm "$DOCKER_NAME"
+                docker stop "$DOCKER_BITCOIN_NAME"
+                docker rm "$DOCKER_BITCOIN_NAME"
+                docker network rm "$DOCKER_NETWORK"
+                docker volume rm "$DOCKER_BITCOIN_VOLUME"
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
                 mkdir -p "$bc_dir" "$p2p_dir" &> /dev/null
                 msg bold green " +++ Cleared blockchain files + p2p + peerplays container + bitcoin container + son network"
                 ;;
@@ -991,7 +1002,7 @@ sb_clean() {
     read -p "Do you want to remove the blockchain files? (y/n) > " cleanblocks
     if [[ "$cleanblocks" == "y" ]]; then
         msg bold red " !!! Clearing blockchain files..."
-        rm -rvf "$bc_dir"/*
+        rm -rfv "${bc_dir:?}"/*
         mkdir -p "$bc_dir" &> /dev/null
         msg bold green " +++ Cleared blockchain files"
     else
@@ -1001,7 +1012,7 @@ sb_clean() {
     read -p "Do you want to remove the p2p files? (y/n) > " cleanp2p
     if [[ "$cleanp2p" == "y" ]]; then
         msg bold red " !!! Clearing p2p files..."
-        rm -rvf "$p2p_dir"/*
+        rm -rfv "${p2p_dir:?}"/*
         mkdir -p "$p2p_dir" &> /dev/null
         msg bold green " +++ Cleared p2p files"
     else
@@ -1011,12 +1022,23 @@ sb_clean() {
     read -p "Do you want to remove the shared memory / rocksdb files? (y/n) > " cleanshm
     if [[ "$cleanshm" == "y" ]]; then
         msg bold red " !!! Clearing shared memory files..."
-        rm -rvf "$SHM_DIR"/*
+        rm -rfv "${SHM_DIR:?}"/*
         mkdir -p "$SHM_DIR" &> /dev/null
         msg bold green " +++ Cleared shared memory files"
     else
         msg yellow " >> Not clearing shared memory folder."
     fi
+
+    read -p "Do you want to remove the compressed copy of the peerplays blockchain? (y/n) > " cleanarchive
+    if [[ "$cleanarchive" == "y" ]]; then
+        msg bold red " !!! Clearing compressed archive of peerplays chain"
+        rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
+
+        msg bold green " +++ Cleared compressed archive of peerplays chain"
+    else
+        msg yellow " >> Not clearing compressed archive of peerplays chain"
+    fi
+
 
     msg bold green " ++ Done."
 }
