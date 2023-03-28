@@ -1,14 +1,65 @@
-FROM datasecuritynode/peerplays:ubuntu-for-peerplays
-MAINTAINER Peerplays Blockchain Standards Association
+FROM ubuntu:20.04
+LABEL Peerplays Blockchain Standards Association
 
-WORKDIR /home/peerplays/peerplays-network
+#===============================================================================
+# Ubuntu setup
+#===============================================================================
 
 RUN \
-    mkdir src
+    apt-get update -y && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      apt-utils \
+      autoconf \
+      bash \
+      build-essential \
+      ca-certificates \
+      cmake \
+      dnsutils \
+      doxygen \
+      expect \
+      git \
+      graphviz \
+      libboost1.67-all-dev \
+      libbz2-dev \
+      libcurl4-openssl-dev \
+      libncurses-dev \
+      libsnappy-dev \
+      libssl-dev \
+      libtool \
+      libzip-dev \
+      locales \
+      lsb-release \
+      mc \
+      nano \
+      net-tools \
+      ntp \
+      openssh-server \
+      pkg-config \
+      perl \
+      python3 \
+      python3-jinja2 \
+      sudo \
+      systemd-coredump \
+      wget
 
+ENV HOME /home/peerplays
+RUN useradd -rm -d /home/peerplays -s /bin/bash -g root -G sudo -u 1000 peerplays
+RUN echo "peerplays  ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/peerplays
+RUN chmod 440 /etc/sudoers.d/peerplays
+
+RUN service ssh start
+RUN echo 'peerplays:peerplays' | chpasswd
+
+# SSH
+EXPOSE 22
+
+#===============================================================================
 # libzmq setup
+#===============================================================================
+
+WORKDIR /home/peerplays/
+
 RUN \
-    cd src && \
     wget https://github.com/zeromq/libzmq/archive/refs/tags/v4.3.4.zip && \
     unzip v4.3.4.zip && \
     cd libzmq-4.3.4 && \
@@ -18,9 +69,13 @@ RUN \
     make -j$(nproc) install && \
     ldconfig
 
+#===============================================================================
 # cppzmq setup
+#===============================================================================
+
+WORKDIR /home/peerplays/
+
 RUN \
-    cd src && \
     wget https://github.com/zeromq/cppzmq/archive/refs/tags/v4.8.1.zip && \
     unzip v4.8.1.zip && \
     cd cppzmq-4.8.1 && \
@@ -29,6 +84,7 @@ RUN \
     cmake .. && \
     make -j$(nproc) install && \
     ldconfig
+
 
 ###
 # Overridable build arguments
@@ -41,7 +97,7 @@ RUN \
 ARG PEERPLAYS_VERSION=master
 ENV PEERPLAYS_VERSION ${PEERPLAYS_VERSION}
 
-ARG PEERPLAYS_SOURCE="https://github.com/peerplays-network/peerplays.git"
+ARG PEERPLAYS_SOURCE="https://gitlab.com/pbsa/peerplays.git"
 ENV PEERPLAYS_SOURCE ${PEERPLAYS_SOURCE}
 
 ARG PEERPLAYS_STATIC_BUILD=ON
@@ -59,27 +115,30 @@ ENV CLEAR_VOTES ${CLEAR_VOTES}
 ARG SKIP_BY_TX_ID=ON
 ENV SKIP_BY_TX_ID ${SKIP_BY_TX_ID}
 
-RUN cd ~ && \
+RUN \
     echo " >>> Cloning tag/branch ${PEERPLAYS_VERSION} from repo: ${PEERPLAYS_SOURCE}" && \
 	git clone ${PEERPLAYS_SOURCE} peerplays -b ${PEERPLAYS_VERSION} && \
 	cd peerplays && \
-	BOOST_ROOT=$HOME/opt/boost_1_67_0 && \
-	wget -c 'http://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.bz2/download' -O boost_1_67_0.tar.bz2 && \
-	tar xjf boost_1_67_0.tar.bz2 && \
-	cd boost_1_67_0/ && \
-	./bootstrap.sh "--prefix=$BOOST_ROOT" && \
-	./b2 install && \
 	git checkout ${PEERPLAYS_VERSION} && \
 	git submodule update --init --recursive && \
-        cd ~/peerplays && \
-	cmake -DBOOST_ROOT="$BOOST_ROOT" -DCMAKE_BUILD_TYPE=Release . \
+    mkdir build && \ 
+    cd build && \
+	cmake -DBOOST_ROOT="$BOOST_ROOT" -DCMAKE_BUILD_TYPE=Release .. \
             -DLOW_MEMORY_NODE=${LOW_MEMORY_MODE} \
             -DCLEAR_VOTES=${CLEAR_VOTES} \
             -DPEERPLAYS_STATIC_BUILD=${PEERPLAYS_STATIC_BUILD} \
-            -DSKIP_BY_TX_ID=${SKIP_BY_TX_ID} && \
-	make -j$(nproc) && make install && rm -rf ~/peerplays
-VOLUME /peerplays
-WORKDIR /peerplays
+            -DSKIP_BY_TX_ID=${SKIP_BY_TX_ID} \
+            -DENABLE_MIRA=${ENABLE_MIRA} && \
+	make -j$(nproc) cli_wallet witness_node && \
+    make install 
+
+WORKDIR /home/peerplays/peerplays-network
+RUN \
+    ln -s /home/peerplays/peerplays/build/programs/cli_wallet/cli_wallet ./ && \
+    ln -s /home/peerplays/peerplays/build/programs/witness_node/witness_node ./
+
+
+VOLUME /peerplays-network
 
 # P2P (seed) port
 EXPOSE 2001

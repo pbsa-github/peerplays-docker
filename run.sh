@@ -92,13 +92,17 @@ if [[ -f .env ]]; then
 fi
 
 # blockchain folder, used by dlblocks
-: "${BC_FOLDER="$DATADIR/witness_node_data_dir/blockchain"}"
+: "${BC_FOLDER="$DATADIR/witness_node_data_dir"}"
 
 : "${EXAMPLE_MIRA="$DATADIR/witness_node_data_dir/database.cfg.example"}"
 : "${MIRA_FILE="$DATADIR/witness_node_data_dir/database.cfg"}"
 
 : "${EXAMPLE_CONF="$DATADIR/witness_node_data_dir/config.ini.example"}"
 : "${CONF_FILE="$DATADIR/witness_node_data_dir/seed_config.ini"}"
+
+# bitcoin blockchain folder, used by dlbitcoin
+: "${BTC_FOLDER="$DATADIR/libbitcoin"}"
+
 
 # full path to btc regtest config
 : "${BTC_REGTEST_CONF="/var/opt/peerplays-docker/bitcoin/regtest/bitcoin.conf"}"
@@ -157,7 +161,8 @@ help() {
     start_son - starts son seed container
     start_son_regtest - starts son seed container and bitcoind container under the docker network
     clean - Remove blockchain, p2p, and/or shared mem folder contents, seed, bitcoind, and son docker network (warns beforehand)
-    dlblocks - download and decompress the blockchain to speed up your first start
+    dlblocks - download and decompress Peerplays blockchain to speed up your first start
+    dlbitcoin - download and decompress the bitcoin blockchain to speed up SONs inital sync
     replay - starts seed container (in replay mode)
     replay_son - starts son seed container (in replay mode)
     memory_replay - starts seed container (in replay mode, with --memory-replay)
@@ -361,30 +366,128 @@ build_full() {
 # Instead, you can continue your download using the uncompressed version over HTTP:
 #
 dlblocks() {
-    pkg_not_found rsync rsync
-    pkg_not_found lz4 liblz4-tool
-    pkg_not_found xz xz-utils
+    pkg_not_found wget wget
+    msg red "It is advised to run "./run.sh clean" prior to running dlblocks"
+    msg yellow "If you're unsure which option to select, choose option r for safest option"
     
-    if [[ ! -d "$BC_FOLDER/database/" ]]; then
-        msg "Blockchain database doesn't exist, creating.."
+    if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" || -f "$BC_FOLDER/mainnet-blocks-index.tar.gz" ]]; then
+        echo "Blockchain database or an archive of it already exists:" 
+        while true; do
+            read -p "Do you want to download/decompress on the fly, or start/resume a new download (Resuming also starts a fresh download, but keeps the database archive)? [y/n/r]: "  answer
+            if [ "$answer" == "y" ]; then
+                if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" ]]; then
+                    msg yellow "Please run './run.sh clean' before trying again"
+                    exit 1
+                fi
+                cd "$BC_FOLDER" || return
+                msg yellow "Downloading and decompressing on the fly"
+                msg yellow "Ensure you have at least 10GB of free space available!"
+                df -h
+                sleep 10
+                curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+                break
+                
+            elif [ "$answer" == "n" ]; then
+                msg "Nothing was removed, exiting.."
+                exit 
 
+            elif [ "$answer" == "r" ]; then
+                cd "$BC_FOLDER" || return
+                msg yellow "This option doesn't decompress on the fly, ensure you have more than 20GB of free space - Waiting 10 seconds.."
+                df -h "$(pwd)"
+                sleep 10
+                wget -c https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
+          
+                if [[ -f "$BC_FOLDER/blockchain/database/block_num_to_block/blocks" || -f "$BC_FOLDER/blockchain/database/block_num_to_block/index" ]]; then
+                    msg yellow "Existing blockchain database found. No extraction needed." 
+                    msg yellow "Rerun the script with option y if you want a fresh download"
+                    msg yellow "Use ./run.sh clean then rerun dlblocks"
+                    sleep 5
+                else
+                    msg yellow "Extracting, this might take a minute.."
+                    tar xzvf mainnet-blocks-index.tar.gz
+                fi
+                break
+                
+            else
+                msg "Invalid input, enter 'y' or 'n' or 'r'"
+            fi
+        done
+    else
+        msg yellow "Blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 20GB of free space.."
+        cd "$BC_FOLDER" || exit
+        curl https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz | tar xzvf -
+        yellow msg "Ensure to extract this index where it was downloaded, inside of: " "$BC_FOLDER"
+    
     fi
 
-    if [[ -e "$BC_FOLDER/database/block_num_to_block/blocks" || -e "$BC_FOLDER/database/block_num_to_block/index" ]]; then
-        read -p "Blockchain database already exists, Do you want to delete and redownload? [y/n]" answer
+    if [ $? == 0 ] ; then
+        msg "FINISHED. Blockchain installed to ${BC_FOLDER}"
+        echo "Remember to resize your /dev/shm, and run with replay!"
+        echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
+        echo "$ ./run.sh replay"
+    else 
+        msg "Download error, please run dlblocks again."
+    fi
+
+}
+
+dlbitcoin() {
+    pkg_not_found wget wget
+    
+    if [[ ! -d "$BTC_FOLDER" ]]; then
+        msg "Libbitcoin Blockchain database doesn't exist, creating and starting download - Ensure you have atleast 1TB free disk space.."
+        df -h .
+        sleep 10
+
+        
+
+        mkdir "$BTC_FOLDER"
+    fi
+
+    if [[ -f "$BTC_FOLDER/mainnet-libbitcoin.tar.gz" || -f "$BTC_FOLDER/blockchain/transaction_table" || -f "$BTC_FOLDER/blockchain/history_rows" || -f "$BTC_FOLDER/blockchain/block_index" ]]; then
+        echo "Bitcoin blockchain database or an archive of it already exists:" 
+        read -p "Do you want to delete and redownload or resume a partial download (Resuming also starts a fresh download, but doesnt decompress on the fly)? [y/n/r]: "  answer
+
         if [ "$answer" == "y" ]; then
+            cd "$BTC_FOLDER" || return
+            msg red "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            msg red "!! THIS OPTION IS NOT SAFE IF YOU HAVE AN UNSTABLE INTERNET CONNECTION !!!!!!!!!!!!!!!!"
+            msg red "!! IF DOWNLOAD IS RESTARTED, PROGRESS WILL BE DESTROYED - USE OPTION "r" TO BE SAFE !!!!!"
+            msg red "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            msg red "Ensure you have atleast 970GB+ of free disk space!"
+            msg yellow "Download will begin in 40 seconds, please use option "r" to be safe"
+            df -h .
+            sleep 40
+            msg red "Downloading and decompressing on the fly"
             msg "Removing old blocks and index files"
-            rm -rfv "$BC_FOLDER/database/" 2> /dev/null
-            rm "$BC_FOLDER/db_version" 2> /dev/null
-            rm -rfv "$BC_FOLDER/object_database/" 2> /dev/null
-           
+            rm -rfv "$BTC_FOLDER/blockchain/" 2> /dev/null
+            curl https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz | tar xzvf -
+            
         elif [ "$answer" == "n" ]; then
             msg "Nothing was removed, exiting.."
             exit 
+
+        elif [ "$answer" == "r" ]; then
+            cd "$BTC_FOLDER" || return
+            msg red "This option doesn't decompress on the fly, ensure you have more than 1.625TB (970+GB TOTAL used after removing tarball..) - Waiting 10 seconds.."
+            df -h .
+            sleep 10
+            wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz 
+            msg yellow "Extracting, this will take some time.."
+            tar xzvf mainnet-libbitcoin.tar.gz
+            
         else
-            msg "Invalid input, enter 'y' or 'n'"
+            msg "Invalid input, enter 'y' or 'n' or 'r'"
             exit 1
         fi
+    else
+        msg red "Bitcoin blockchain database doesn't exist, downloading and extracting the archieve - Ensure you have 970+GB of free space.."
+        df -h . 
+        sleep 10
+        cd "$BTC_FOLDER" || exit
+        wget -c https://peerplays.download/downloads/libbitcoin-mainnet/mainnet-libbitcoin.tar.gz
+        tar xzvf mainnet-libbitcoin.tar.gz
     fi
 
     #if (( $# > 0 )); then
@@ -392,35 +495,8 @@ dlblocks() {
     #    return $?
     #fi
 
-
-        cd "$BC_FOLDER" || exit
-        . /etc/os-release && OS=$NAME VER=$VERSION_ID
-        echo Operating System: "$OS" ":" " $VER"
-
-        if   [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "20.04" ]]; then
-            msg "Newer System, already validated. Proceeding to download and extract"
-            rm mainnet-blocks-index.tar.gz*
-            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            tar -xvf mainnet-blocks-index.tar.gz
-            rm mainnet-blocks-index.tar.gz
-
-        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "18.04" ]]; then
-            echo "System is reaching end of life, please consider updating - Proceeding to download and extract"
-            rm mainnet-blocks-index.tar.gz*
-            wget https://peerplays.download/downloads/peerplays-mainnet/mainnet-blocks-index.tar.gz
-            tar -xvf mainnet-blocks-index.tar.gz 
-            rm mainnet-blocks-index.tar.gz
-
-        elif [[ "$OS" == "Ubuntu" ]] && [[ "$VER" == "16.04" ]]; then
-            echo "Systems out of LTS are not supported, please consider updating your system.."
-            exit
-        fi
-
     if [ $? == 0 ] ; then
-        msg "FINISHED. Blockchain installed to ${BC_FOLDER}/database/block_num_to_block/"
-        echo "Remember to resize your /dev/shm, and run with replay!"
-        echo "$ ./run.sh shm_size SIZE (e.g. 8G)"
-        echo "$ ./run.sh replay"
+        msg "FINISHED. Libbitcoin Blockchain installed to ${BTC_FOLDER}"
     else 
         msg "Download error, please run dlblocks again."
     fi
@@ -583,9 +659,9 @@ start() {
     msg bold green " -> Starting container '${DOCKER_NAME}'..."
     seed_exists
     if [[ $? == 0 ]]; then
-        docker start $DOCKER_NAME
+        docker start "$DOCKER_NAME"
     else
-        docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name $DOCKER_NAME -t "$DOCKER_IMAGE" witness_node --data-dir=/peerplays/witness_node_data_dir
+        docker run ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays-network -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir
     fi
 }
 
@@ -656,7 +732,7 @@ replay() {
     msg yellow " -> Removing old container '${DOCKER_NAME}'"
     docker rm "$DOCKER_NAME" 2> /dev/null
     msg green " -> Running peerplays (image: ${DOCKER_IMAGE}) with replay in container '${DOCKER_NAME}'..."
-    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" ./witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir --replay
+    docker run --restart unless-stopped ${DPORTS[@]} -v "$SHM_DIR":/shm -v "$DATADIR":/peerplays-network -d --name "$DOCKER_NAME" -t "$DOCKER_IMAGE" witness_node --data-dir=/home/peerplays/peerplays-network/witness_node_data_dir --replay
     msg bold green " -> Started."
 }
 
@@ -875,35 +951,37 @@ sb_clean() {
         case $1 in
             sh*)
                 msg bold red " !!! Clearing all files in SHM_DIR ( $SHM_DIR )"
-                rm -rfv "$SHM_DIR"/*
+                rm -rfv "${SHM_DIR:?}"/*
                 mkdir -p "$SHM_DIR" &> /dev/null
                 msg bold green " +++ Cleared shared files directory."
                 ;;
             bloc*)
                 msg bold red " !!! Clearing all files in $bc_dir and $p2p_dir"
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
+                rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
                 mkdir -p "$bc_dir" "$p2p_dir" &> /dev/null
                 msg bold green " +++ Cleared blockchain files + p2p"
                 ;;
             all)
                 msg bold red " !!! Clearing blockchain, p2p, and shared memory files..."
-                rm -rfv "$SHM_DIR"/*
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                rm -rfv "${SHM_DIR:?}"/*
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
+                rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
                 mkdir -p "$bc_dir" "$p2p_dir" "$SHM_DIR" &> /dev/null
                 msg bold green " +++ Cleared blockchain + p2p + shared memory"
                 ;;
             son)
                 msg bold red "!!! Clearing all files in $bc_dir and $p2p_dir and removing $DOCKER_NAME, $DOCKER_BITCOIN_NAME containers and $DOCKER_NETWORK docker network and $DOCKER_BITCOIN_VOLUME volume"
-                docker stop $DOCKER_NAME
-                docker rm $DOCKER_NAME
-                docker stop $DOCKER_BITCOIN_NAME
-                docker rm $DOCKER_BITCOIN_NAME
-                docker network rm $DOCKER_NETWORK
-                docker volume rm $DOCKER_BITCOIN_VOLUME
-                rm -rfv "$bc_dir"/*
-                rm -rfv "$p2p_dir"/*
+                docker stop "$DOCKER_NAME"
+                docker rm "$DOCKER_NAME"
+                docker stop "$DOCKER_BITCOIN_NAME"
+                docker rm "$DOCKER_BITCOIN_NAME"
+                docker network rm "$DOCKER_NETWORK"
+                docker volume rm "$DOCKER_BITCOIN_VOLUME"
+                rm -rfv "${bc_dir:?}"/*
+                rm -rfv "${p2p_dir:?}"/*
                 mkdir -p "$bc_dir" "$p2p_dir" &> /dev/null
                 msg bold green " +++ Cleared blockchain files + p2p + peerplays container + bitcoin container + son network"
                 ;;
@@ -924,7 +1002,7 @@ sb_clean() {
     read -p "Do you want to remove the blockchain files? (y/n) > " cleanblocks
     if [[ "$cleanblocks" == "y" ]]; then
         msg bold red " !!! Clearing blockchain files..."
-        rm -rvf "$bc_dir"/*
+        rm -rfv "${bc_dir:?}"/*
         mkdir -p "$bc_dir" &> /dev/null
         msg bold green " +++ Cleared blockchain files"
     else
@@ -934,7 +1012,7 @@ sb_clean() {
     read -p "Do you want to remove the p2p files? (y/n) > " cleanp2p
     if [[ "$cleanp2p" == "y" ]]; then
         msg bold red " !!! Clearing p2p files..."
-        rm -rvf "$p2p_dir"/*
+        rm -rfv "${p2p_dir:?}"/*
         mkdir -p "$p2p_dir" &> /dev/null
         msg bold green " +++ Cleared p2p files"
     else
@@ -944,12 +1022,23 @@ sb_clean() {
     read -p "Do you want to remove the shared memory / rocksdb files? (y/n) > " cleanshm
     if [[ "$cleanshm" == "y" ]]; then
         msg bold red " !!! Clearing shared memory files..."
-        rm -rvf "$SHM_DIR"/*
+        rm -rfv "${SHM_DIR:?}"/*
         mkdir -p "$SHM_DIR" &> /dev/null
         msg bold green " +++ Cleared shared memory files"
     else
         msg yellow " >> Not clearing shared memory folder."
     fi
+
+    read -p "Do you want to remove the compressed copy of the peerplays blockchain? (y/n) > " cleanarchive
+    if [[ "$cleanarchive" == "y" ]]; then
+        msg bold red " !!! Clearing compressed archive of peerplays chain"
+        rm -rfv "${DATADIR}/witness_node_data_dir/mainnet-blocks-index.tar.gz"
+
+        msg bold green " +++ Cleared compressed archive of peerplays chain"
+    else
+        msg yellow " >> Not clearing compressed archive of peerplays chain"
+    fi
+
 
     msg bold green " ++ Done."
 }
@@ -1085,6 +1174,9 @@ case $1 in
         ;;
     dlblocks)
         dlblocks "${@:2}"
+        ;;
+    dlbitcoin)
+        dlbitcoin "${@:2}"
         ;;
     enter)
         enter
